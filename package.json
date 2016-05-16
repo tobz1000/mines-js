@@ -1,0 +1,32 @@
+{
+  "name": "mines-json-server",
+  "version": "1.0.0",
+  "description": "An HTTP-JSON Minesweeper game server",
+  "main": "server.js",
+  "dependencies": {
+    "2d-array": "^1.0.0",
+    "assert-type": "^0.1.0",
+    "check-type": "^0.4.11",
+    "check-types": "^6.0.0",
+    "command-line-args": "^2.1.6",
+    "event-source": "^0.1.1",
+    "express": "^4.13.4",
+    "express-eventsource": "^0.0.4",
+    "jade": "^1.11.0",
+    "jquery": "^2.2.2",
+    "json-over-tcp": "^0.3.2",
+    "json-socket": "^0.1.2",
+    "jsonsocket": "^1.0.2",
+    "lodash": "^4.6.1",
+    "ndarray": "^1.0.18",
+    "node-inspector": "^0.12.7",
+    "underscore": "^1.8.3"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "author": "Toby Dimmick <tobydimmick@protonmail.ch>",
+  "license": "MIT"
+}

@@ -1,0 +1,55 @@
+* {
+	font-family: sans-serif;
+}
+
+input[type=number] {
+	width: 7ch;
+}
+
+#gameArea {
+	display: flex;
+}
+
+#debugArea {
+	padding: 10px;
+	display: flex;
+}
+
+/* No highlighting of cursor-changing */
+.laminate {
+	cursor: default;
+	-moz-user-select: none;
+	-webkit-user-select: none;
+	-ms-user-select: none;
+}
+
+.cell {
+	width: 20px;
+	height: 20px;
+	text-align: center;
+}
+
+.cellUnknown {
+	background-color: #bbbbbb;
+}
+
+.cellFlagged {
+	background-color: #9999ff;
+}
+
+.cellMine {
+	background-color: #ff5555;
+}
+
+.cellToClear {
+	background-color: #eeee66;
+}
+
+.cellHover {
+	background-color: #dddddd;
+}
+
+pre {
+	font-family: monospace;
+	white-space: pre-wrap;
+}

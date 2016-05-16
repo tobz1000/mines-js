@@ -1,0 +1,22 @@
+{
+  "name": "mines-web-client",
+  "homepage": "https://github.com/tobz1000/mines",
+  "authors": [
+    "Toby Dimmick <tobydimmick@protonmail.ch>"
+  ],
+  "description": "Game viewer/player for mines json server.",
+  "main": "",
+  "license": "MIT",
+  "private": true,
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "jquery": "^2.2.3",
+    "json-formatter-js": "mohsen1/json-formatter-js#^1.0.0"
+  }
+}
