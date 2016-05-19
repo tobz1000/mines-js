@@ -409,7 +409,7 @@ const ClientGame = function(id, dims, mines, pass, debug) {
 		toClearCoords[turnNumber] = data.toClear;
 
 		flaggedCoords[turnNumber] = [];
-		if(data.debug.cellInfo) {
+		if(data.debug && data.debug.cellInfo) {
 			$.each(data.debug.cellInfo, (key, cellInfo) => {
 				if(flaggedIndicator(cellInfo))
 					flaggedCoords[turnNumber].push(cellInfo.coords);
