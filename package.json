@@ -2,6 +2,7 @@
   "name": "mines-json-server",
   "version": "1.0.0",
   "description": "An HTTP-JSON Minesweeper game server",
+  "repository": "tobz1000/mines",
   "main": "server.js",
   "dependencies": {
     "2d-array": "^1.0.0",
@@ -25,7 +26,7 @@
   "devDependencies": {},
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node server.js"
+    "start": "node server.js -d"
   },
   "author": "Toby Dimmick <tobydimmick@protonmail.ch>",
   "license": "MIT"
