@@ -42,7 +42,7 @@ const newGame = () => {
 	const mines = getVal(`mineCount`, 10);
 	const pass = Math.random().toString(36).substr(2, 10);
 
-	action(
+	serverAction(
 		{ action: 'newGame', dims: [x, y], mines: mines, pass: pass },
 		resp => {
 			gamePasses[resp.id] = pass;
@@ -89,9 +89,9 @@ const showMsg = msg => {
 
 /* Send a request to the server; optionally perform an action based on the
 response. */
-const action = (req, respFn) => {
+const serverAction = (req, respFn) => {
 	/* TODO - proper 'fail' handler, once the server gives proper HTTP codes */
-	$.post('action', JSON.stringify(req), resp => {
+	$.post('server', JSON.stringify(req), resp => {
 		if(resp.error) {
 			let errMsg = `Server error: ${resp.error}`;
 			if(resp.info)
@@ -133,7 +133,7 @@ const ClientGame = function(id, dims, mines, pass, debug) {
 	let latestTurn;
 	let gameOver = false;
 
-	action(
+	serverAction(
 		{ action: 'status', id: id },
 		resp => {
 			latestTurn = resp.turn;
@@ -215,7 +215,7 @@ const ClientGame = function(id, dims, mines, pass, debug) {
 		if(!pass)
 			throw new Error(`Don't have the password for game '${id}'`);
 
-		action({
+		serverAction({
 			action : 'clearCells',
 			id : id,
 			pass: pass,

@@ -48,8 +48,7 @@ const MinesError = function(error, info) {
 const serverInit = () => {
 	const app = express();
 	app.use(express.static(PUBLIC_HTML_DIR));
-	app.post('/action', postResponse);
-	app.listen(1066);
+	app.post('/server', responsePoster(serverAction));
 
 	if(args.gamedb) {
 		app.use('/games', (req, resp, next) => {
@@ -59,6 +58,8 @@ const serverInit = () => {
 			sseReplayer(getGame(req.query.id).broadcaster, req, resp, next);
 		});
 	}
+
+	app.listen(1066);
 }
 
 /* Hacky; uses sse's reconnection replay to get all events from a given
@@ -88,34 +89,36 @@ const getGame = id => {
 	return game;
 };
 
-/*	TODO: can't figure out how to process multiple requests at once!
-	Seems post requests are queued, and a new one isn't started until the
-	response for the last one is end()ed. */
-const postResponse = (req, resp) => {
-	let body = "";
-	req.on('data', chunk => {
-		body += chunk;
-	});
-	req.on('end', () => {
-		let responseObj;
-		try {
-			responseObj = performAction(JSON.parse(body));
-		} catch(e) {
-			if(e instanceof SyntaxError)
-				responseObj = { error: "malformed JSON request data" };
-			else if (e instanceof MinesError) {
-				responseObj = e;
-				console.log(
-					`Problem with client request: ${JSON.stringify(e)}`
-				);
-			} else {
-				console.error(`Unhandled error: ${e.stack}`);
-				responseObj = { error: "unknown error" };
+const responsePoster = (actionFn) => {
+	/*	TODO: can't figure out how to process multiple requests at once!
+		Seems post requests are queued, and a new one isn't started until the
+		response for the last one is end()ed. */
+	return (req, resp) => {
+		let body = "";
+		req.on('data', chunk => {
+			body += chunk;
+		});
+		req.on('end', () => {
+			let responseObj;
+			try {
+				responseObj = actionFn(JSON.parse(body));
+			} catch(e) {
+				if(e instanceof SyntaxError)
+					responseObj = { error: "malformed JSON request data" };
+				else if (e instanceof MinesError) {
+					responseObj = e;
+					console.log(
+						`Problem with client request: ${JSON.stringify(e)}`
+					);
+				} else {
+					console.error(`Unhandled error: ${e.stack}`);
+					responseObj = { error: "unknown error" };
+				}
 			}
-		}
-		/* TODO: Proper http response codes */
-		resp.end(JSON.stringify(responseObj));
-	});
+			/* TODO: Proper http response codes */
+			resp.end(JSON.stringify(responseObj));
+		});
+	};
 };
 
 /* TODO: actual db. */
@@ -130,7 +133,7 @@ const db = {
 
 /* Performs the action requested by a player. Returns the gameState, and
 broadcasts it. */
-const performAction = req => {
+const serverAction = req => {
 	let actionName, gameAction, game, coordsToClear;
 
 	const newGameId = () => {
