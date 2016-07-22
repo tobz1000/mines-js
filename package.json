@@ -31,7 +31,7 @@
   "devDependencies": {},
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "babel-node src/server.js -d"
+    "start": "babel-node src/server.js"
   },
   "author": "Toby Dimmick <tobydimmick@protonmail.ch>",
   "license": "MIT"

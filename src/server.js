@@ -14,7 +14,7 @@ const serverInit = () => {
 	const app = express();
 	const entitiesReady = [];
 
-	app.use(express.static('public'));
+	app.use('/', express.static('src/public'));
 
 	for(let i of entities) {
 		const pr = i.entity.init().then(() => {
