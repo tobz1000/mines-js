@@ -5,18 +5,22 @@ const ndArray = require('ndarray');
 
 const ReqError = require("./error").ReqError;
 
-const coordsType = [ Number ];
+const cellState = {
+	EMPTY: 'empty',
+	MINE: 'mine',
+	CLEARED: 'cleared'
+};
 
-/* TODO: refactor Game functionality into methods for GameState (and rename the
-latter). */
-const GameState = mg.model("GameState", {
+const coordsType = [ Number ];
+const GameModel = mg.model("Game", {
 	pass : String,
-	/* Requested clears and server-automated clears for each turn */
-	state :{
+	/* Requested clears and actual clears (including zero-surround) for each
+	turn */
+	state : {
 		turns : [
 			{
 				user: [ coordsType ],
-				auto: [ coordsType ]
+				actual: [ coordsType ]
 			}
 		],
 		gameOver : Boolean,
@@ -25,7 +29,7 @@ const GameState = mg.model("GameState", {
 		mines : Number,
 		cellsRem : Number,
 		turn : Number,
-		grid : [ String ]
+		gridArray : [ String ]
 	}
 });
 
@@ -33,45 +37,56 @@ const gameServerInit = async () => {
 	await mg.connect("localhost", "test");
 }
 
-const cellState = {
-	EMPTY: 'empty',
-	MINE: 'mine',
-	CLEARED: 'cleared'
-};
+const newGame = async (params) => {
+	const game = new Game(params);
 
-const newGame = async ({dims: dims, mines: mines, pass: pass}) => {
-	const game = new Game({dims: dims, mines: mines});
-	const gameState = new GameState({pass: pass, state: game.state});
+	game.save();
 
-	gameState.save();
-
-	return {
-		id: gameState.id,
-		gameOver: game.gameOver,
-		win: game.win,
-		dims: game.dims,
-		mines: game.mines,
-		cellsRem: game.cellsRem,
-		turn: game.turn
-	};
+	return game.userState;
 }
 
-const clearCells = async ({id: id, coords: coords}) => {
-	(await loadGame(id)).clearCells(coords);
-}
+const clearCells = async ({id, coords, pass}) => {
+	const game = await loadGame(id, pass);
 
-const loadGame = async (id, pass) => {
-	const gameState = await GameState.findById(id);
-
-	if(gameState.pass && gameState.pass !== pass)
+	if(game.pass && game.pass !== pass)
 		throw new ReqError("Incorrect password");
+
+	const newCells = game.clearCells(coords);
+
+	game.save();
+
+	const state = game.gameState;
+	state.newCellData = newCells;
+
+	return state;
 }
 
-class Game {
+const gameState = async ({id}) => {
+	const s = await loadGame(id);
+	console.log(s);
+	return s.gameState;
+}
+
+/* TODO: problem: this will return a new GameModel, not a Game. Might have to
+use mongoose's method & virtual property mechanisms instead of class syntax :(
+*/
+const loadGame = (id) => {
+	return Game.findById(id);
+}
+
+class Game extends GameModel {
 	/* Parameters: either .dims and .mines, or .load to reload a game's state */
-	constructor({load: load, dims: dims, mines: mines}) {
-		this.state = load || Game.newGameState(dims, mines);
-		this.gameGrid = ndArray(this.state.grid, this.state.dims);
+	constructor(params) {
+		if(params)
+		{
+			const {dims, mines, pass} = params;
+			super({
+				pass: pass,
+				state: Game.newGameState(dims, mines)
+			});
+		}
+		else
+			super(arguments);
 	}
 
 	static newGameState(dims, mines) {
@@ -96,18 +111,53 @@ class Game {
 			gameOver : false,
 			win : false,
 			dims : dims,
+			size : size,
 			mines : mines,
 			cellsRem : size - mines,
 			turn : 0,
-			grid : gridArray
+			gridArray : gridArray
 		};
 	}
 
-	clearCells(coordsArr) {
+	get gameGrid() {
+		if(!this._gameGrid)
+			this._gameGrid = ndArray(this.state.gridArray, this.state.dims);
+
+		return this._gameGrid;
+	}
+
+	/* Number of current turn (starting at 0) */
+	get turn() {
+		return this.state.turns.length;
+	}
+
+	get userState() {
+		return {
+			id : this.id,
+			// TODO: seed parameter
+			gameOver : this.state.gameOver,
+			win : this.state.win,
+			dims : this.state.dims,
+			mines : this.state.mines,
+			cellsRem : this.state.cellsRem,
+			turn : this.turn,
+		};
+	}
+
+	clearCells(coordsArr, pass) {
+		if(this.pass && this.pass !== pass)
+			throw new ReqError("Incorrect password");
+
 		if(state.gameOver)
 			throw new ReqError("Game over!");
 
-		const clearedCells = [];
+		const turn = {
+			user: coordsArr,
+			actual: []
+		};
+
+		/* Info about cleared cells */
+		const ret = [];
 		const coordsStack = coordsArr.slice();
 
 		let coords;
@@ -118,13 +168,18 @@ class Game {
 
 			cell.uncover();
 
-			clearedCells.push(cell.info);
+			turn.actual.push(coords);
+			ret.push(cell.info);
+
 			if(cell.surroundCount === 0) {
 				for(let surrCoords of surroundingCoords(coords)) {
 					coordsStack.push(surrCoords);
 				}
 			}
 		}
+
+		this.turns.push(turn);
+		return ret;
 	}
 };
 
@@ -176,7 +231,7 @@ const actions = {
 		func : clearCells
 	},
 	status : {
-		func : async () => { throw new ReqError("no status 4 u"); }
+		func : gameState
 	}
 };
 
