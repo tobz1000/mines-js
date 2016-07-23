@@ -53,7 +53,7 @@ const responsePoster = (entity) => {
 			}
 		}
 		resp.end(JSON.stringify(responseObj));
-	}
+	};
 
 	return (req, resp) => {
 		let body = "";
