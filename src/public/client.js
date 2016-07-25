@@ -43,7 +43,7 @@ const newGame = () => {
 	const pass = Math.random().toString(36).substr(2, 10);
 
 	serverAction(
-		{ action: 'newGame', dims: [x, y], mines: mines, pass: pass },
+		{ action: 'new', dims: [x, y], mines: mines, pass: pass },
 		resp => {
 			gamePasses[resp.id] = pass;
 			displayGame(resp, pass);
@@ -91,7 +91,7 @@ const showMsg = msg => {
 response. */
 const serverAction = (req, respFn) => {
 	/* TODO - proper 'fail' handler, once the server gives proper HTTP codes */
-	$.post('server', JSON.stringify(req), resp => {
+	$.post('server/' + req.action, JSON.stringify(req), resp => {
 		if(resp.error) {
 			let errMsg = `Server error: ${resp.error}`;
 			if(resp.info)
@@ -112,7 +112,7 @@ const ClientGame = function(id, dims, mines, pass, debug) {
 		FLAGGED : "f"
 	}
 
-	const serverWatcher = new EventSource(`watch?id=${id}&from=0`);
+	const serverWatcher = new EventSource(`server/watch?id=${id}&from=0`);
 
 	/* Representation of game state; each cell is a 'GameCell'. */
 	const gameGrid = [];
@@ -216,7 +216,7 @@ const ClientGame = function(id, dims, mines, pass, debug) {
 			throw new Error(`Don't have the password for game '${id}'`);
 
 		serverAction({
-			action : 'clearCells',
+			action : 'turn',
 			id : id,
 			pass: pass,
 			coords : coordsArr
