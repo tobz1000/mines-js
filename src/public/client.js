@@ -10,17 +10,18 @@ let $gameArea, $gameList, currentGame, gamePasses = [];
 
 $(() => {
 	$gameArea = $("#gameArea");
-	$gameList = $("#gameList");
+	$gameList = $("#gameList ul");
 	$gameArea.on('contextmenu', (e) => { e.preventDefault() });
 
-	new EventSource(`games?from=0`)
-		.addEventListener('message', refreshGameList);
+	setInterval(() => {
+		$.getJSON("server/games", null, refreshGameList);
+	}, 1000);
 });
 
-const refreshGameList = resp => {
+const refreshGameList = games => {
 	$gameList.empty();
 
-	for(const g of JSON.parse(resp.data)) {
+	for(const g of games) {
 		/* TODO: race condition for display of "watchable"/"playable", if the
 		response from newGame() is received after the gameLister entry. */
 		const label = `${g.id} (${g.dims[0]}x${g.dims[1]}, ${g.mines}, ` +

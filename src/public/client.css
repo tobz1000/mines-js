@@ -53,3 +53,9 @@ pre {
 	font-family: monospace;
 	white-space: pre-wrap;
 }
+
+div#gameList {
+	height: 240px;
+	width: 320px;
+	overflow:auto;
+}
