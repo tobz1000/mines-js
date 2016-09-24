@@ -56,6 +56,10 @@ pre {
 
 div#gameList {
 	height: 240px;
-	width: 320px;
+	width: 500px;
 	overflow:auto;
+}
+
+#gameList li {
+	font-family: monospace;
 }
