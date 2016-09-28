@@ -15,15 +15,16 @@ const cellState = {
 	CLEARED: 'cleared'
 };
 
-const renameIdKey = (doc, ret) => {
-	ret.id = ret._id;
-	delete ret._id;
-}
+// const renameIdKey = (doc, ret) => {
+// 	ret.id = ret._id;
+// 	delete ret._id;
+// }
 
-const schemaOptions = {
-	toObject : { transform : renameIdKey },
-	toJSON :{ transform : renameIdKey },
-};
+// const schemaOptions = {
+// 	toObject : { transform : renameIdKey },
+// 	toJSON :{ transform : renameIdKey },
+// };
+
 const coordsType = [ Number ];
 const gameSchema = new mg.Schema({
 	pass : String,
@@ -34,10 +35,12 @@ const gameSchema = new mg.Schema({
 	for each turn */
 	turns : [
 		{
+			_id : false,
 			clearReq: [ coordsType ],
 			clearActual: [
 				{
-					coords : [ coordsType ],
+					_id : false,
+					coords : coordsType,
 					surrounding : Number,
 					state : String
 				}
@@ -48,7 +51,7 @@ const gameSchema = new mg.Schema({
 		}
 	],
 	gridArray : [ String ]
-}, schemaOptions);
+});
 
 const gameMethods = {
 	methods : {
@@ -116,6 +119,7 @@ const gameMethods = {
 			}
 
 			const turn = this.turns[turn_num];
+
 			return {
 				id : this.id,
 				// TODO: seed parameter
@@ -125,7 +129,7 @@ const gameMethods = {
 				gameOver : turn.gameOver,
 				win : turn.win,
 				cellsRem : turn.cellsRem,
-				turn : this.turn,
+				turn : turn_num,
 			};
 		},
 	},
@@ -195,6 +199,9 @@ _.each(gameVirtuals, (fn, name) => {
  * "game.gameOver" instead of "game.turns[game.turn - 1].gameOver".
  */
 _.each(gameSchema.tree.turns[0], (type, key) => {
+	if(key === "_id")
+		return;
+
 	gameSchema.virtual(key).get(function() {
 		return this.turns[this.turn][key];
 	}).set(function(val) {
@@ -244,11 +251,7 @@ const listGames = () => {
 
 const gameState = async ({id, turn}) => {
 	const game = await loadGame(id);
-
-	if(!turn)
-		turn = game.turn;
-
-	return game.userStateTurn(turn);
+	return game.userStateTurn(turn || game.turn);
 };
 
 const clearCells = async ({id, coords, pass}) => {
