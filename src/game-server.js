@@ -15,15 +15,16 @@ const cellState = {
 	CLEARED: 'cleared'
 };
 
-// const renameIdKey = (doc, ret) => {
-// 	ret.id = ret._id;
-// 	delete ret._id;
-// }
+const renameIdKey = (doc, ret) => {
+	ret.id = ret._id;
+	delete ret._id;
+}
 
-// const schemaOptions = {
-// 	toObject : { transform : renameIdKey },
-// 	toJSON :{ transform : renameIdKey },
-// };
+/* Necessary for returning db results directly to clients */
+const schemaOptions = {
+	toObject : { transform : renameIdKey },
+	toJSON :{ transform : renameIdKey },
+};
 
 const coordsType = [ Number ];
 const gameSchema = new mg.Schema({
