@@ -60,6 +60,6 @@ div#gameList {
 	overflow:auto;
 }
 
-#gameList li {
+#gameList li, #turnList li {
 	font-family: monospace;
 }

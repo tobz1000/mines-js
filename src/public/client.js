@@ -228,13 +228,15 @@ class ClientGame {
 		const turnNum = turn.turnNum;
 		this.gameTurns[turnNum] = turn;
 
-		$("#turnList").append($("<li>")
+		$("#turnList").append($(`<li value=${turnNum}>`)
 			.click(() => {
 				if(this.currentTurn !== turnNum)
 					this.displayTurn(turnNum);
 			})
-			.text("Turn")
-			.attr("value", turnNum)
+			.text(
+				`R: ${turn.clearReq.length} C: ${turn.clearActual.length} ` +
+				`L: ${turn.cellsRem}`
+			)
 		);
 
 		/* Wait for initial latestTurn value from server before attempting to
