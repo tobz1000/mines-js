@@ -13,6 +13,8 @@ $(() => {
 	$gameList = $("#gameList ul");
 	$gameArea.on('contextmenu', (e) => { e.preventDefault() });
 
+	$("#newGame").click(newGame);
+
 	$("#gameListRefresh").click(refreshGameList);
 	refreshGameList();
 });
@@ -35,7 +37,7 @@ const refreshGameList = async () => {
 	}
 }
 
-const newGame = () => {
+const newGame = async () => {
 	const getVal = (id, defaultVal) => {
 		return parseInt($(`#${id}`).val(), 10) || defaultVal;
 	}
@@ -45,14 +47,13 @@ const newGame = () => {
 	const mines = getVal(`mineCount`, 10);
 	const pass = Math.random().toString(36).substr(2, 10);
 
-	serverAction(
+	const resp = await serverAction(
 		"new",
-		{ dims: [x, y], mines: mines, pass: pass },
-		resp => {
-			gamePasses[resp.id] = pass;
-			displayGame(resp, pass);
-		}
+		{ dims: [x, y], mines: mines, pass: pass }
 	);
+
+	gamePasses[resp.id] = pass;
+	displayGame(resp, pass);
 };
 
 const displayGame = (gameData, pass) => {
@@ -93,7 +94,7 @@ const showMsg = msg => {
 
 /* Send a request to the server; optionally perform an action based on the
 response. */
-const serverAction = async (action, req, respFn) => {
+const serverAction = async (action, req) => {
 	/* TODO - proper 'fail' handler, once the server gives proper HTTP codes */
 	const resp = JSON.parse(
 		await $.post('server/' + action, JSON.stringify(req))
@@ -107,8 +108,7 @@ const serverAction = async (action, req, respFn) => {
 		return;
 	}
 
-	if(respFn)
-		respFn(resp);
+	return resp;
 };
 
 const cellState = {
@@ -121,6 +121,7 @@ class ClientGame {
 		if(dims.length !== 2)
 			throw new Error("Only 2d games supported");
 
+		/* Add constructor args to the ClientGame */
 		$.extend(this, {id, dims, mines, pass, showDebug});
 
 		this.serverWatcher = new EventSource(`server/watch?id=${id}&from=0`);
@@ -132,28 +133,26 @@ class ClientGame {
 		});
 
 		this.gameTurns = {};
-		this.toClearCoords = {};
-		this.flaggedCoords = {};
 		this.debugInfo = {};
 		this.currentTurn = -1;
 		this.gameOver = false;
 
-		/* Retrieve turn number from /status, so we know when the final SSE
-		 * message has been received */
-		serverAction("status", { id: id }, resp => {
-			this.latestTurn = resp.turn;
-			this.displayTurn(this.latestTurn);
-		});
-
 		this.newGameTable();
 
-		$gameArea.append($("<ol>").attr("id", "turnList").addClass("laminate"));
+		$gameArea.append('<ol id="turnList" class="laminate">');
 		$gameArea.append(
-			$("<div>").attr("id", "debugArea").append(
-				$("<div>").attr("id", "debugAreaTurn"),
-				$("<div>").attr("id", "debugAreaCell")
+			$('<div id="debugArea">').append(
+				$('<div id="debugAreaTurn">'),
+				$('<div id="debugAreaCell">')
 			)
 		);
+
+		/* Retrieve turn number from /status, so we know when the final SSE
+		 * message has been received */
+		serverAction("status", { id: id }).then(resp => {
+			this.latestTurn = resp.turnNum;
+			this.displayTurn(this.latestTurn);
+		}).catch(showMsg);
 	}
 
 	newGameTable() {
@@ -163,12 +162,13 @@ class ClientGame {
 		for(let i = 0; i < this.dims[0]; i++) {
 			gameGrid[i] = [];
 			let $row = $("<tr>");
-			$gameTable.append($row);
 
 			for(let j = 0; j < this.dims[1]; j++) {
 				gameGrid[i][j] = new GameCell(this, [i, j]);
 				$row.append(gameGrid[i][j].$elm);
 			}
+
+			$gameTable.append($row);
 		}
 
 		this.$gameTable = $gameTable;
@@ -188,27 +188,15 @@ class ClientGame {
 		const end = reverse ? this.currentTurn : newTurn;
 
 		/* Reset any highlighted "to clear" cells if going backwards. */
-		if(reverse && this.toClearCoords[this.currentTurn]) {
-			for (let coords of this.toClearCoords[this.currentTurn])
-				this.getCell(coords).changeState('unknown');
-		}
-
-		/* Remove flags - even going forwards, in case the client allows
-		unflagging between turns. */
-		let flaggedList = (
-			this.flaggedCoords[this.currentTurn] ||
-			this.flaggedCoords[this.currentTurn - 1]
-		);
-
-		if(flaggedList) {
-			for (let coords of flaggedList)
+		if(reverse && this.currentTurn !== this.latestTurn) {
+			for (let coords of this.gameTurns[this.currentTurn + 1].clearReq)
 				this.getCell(coords).changeState('unknown');
 		}
 
 		/* Set all cell data between old turn and new turn, or remove it if
 		going backwards */
 		for (let i = start; i <= end; i++) {
-			for (let cellData of this.gameTurns[i]) {
+			for (let cellData of this.gameTurns[i].clearActual) {
 				this.getCell(cellData.coords).changeState(
 					reverse ? 'unknown' : cellData.state,
 					cellData.surrounding
@@ -217,79 +205,65 @@ class ClientGame {
 		}
 
 		/* Set new "to clear" cells */
-		if(this.toClearCoords[newTurn]) {
-			for (let coords of this.toClearCoords[newTurn])
+		if(newTurn !== this.latestTurn) {
+			for (let coords of this.gameTurns[newTurn + 1].clearReq)
 				this.getCell(coords).changeState('toClear');
-		}
-
-		/* Show flagged mines from client's debug. Show previous turn's flags if
-		the current turn's debug is unavailable. */
-		flaggedList = (
-			this.flaggedCoords[newTurn] ||
-			this.flaggedCoords[newTurn - 1]
-		);
-
-		if(flaggedList) {
-			for (let coords of flaggedList)
-				this.getCell(coords).changeState('flagged');
 		}
 
 		$gameArea.prepend(this.$gameTable);
 
-		displayDebug(
-			$("#debugAreaTurn"),
-			() => this.debugInfo[newTurn].gameInfo
-		);
+		// displayDebug(
+		// 	$("#debugAreaTurn"),
+		// 	() => this.debugInfo[newTurn].gameInfo
+		// );
 
-		/* Remove cell debug display */
-		displayDebug($("#debugAreaCell"));
+		// /* Remove cell debug display */
+		// displayDebug($("#debugAreaCell"));
 
 		this.currentTurn = newTurn;
 	}
 
-	updateTurnList({turn : turnNumber, newCellData, gameOver, win}) {
-		console.log(arguments);
+	updateTurnList(turn) {
 		/* Add turn new data from server to list & GUI */
-		this.gameTurns[turnNumber] = newCellData;
+		const turnNum = turn.turnNum;
+		this.gameTurns[turnNum] = turn;
 
 		$("#turnList").append($("<li>")
 			.click(() => {
-				if(this.currentTurn !== turnNumber)
-					this.displayTurn(turnNumber);
+				if(this.currentTurn !== turnNum)
+					this.displayTurn(turnNum);
 			})
 			.text("Turn")
-			.attr("value", turnNumber)
+			.attr("value", turnNum)
 		);
 
 		/* Wait for initial latestTurn value from server before attempting to
 		update it */
 		if(this.latestTurn !== undefined)
-			this.latestTurn = Math.max(this.latestTurn, turnNumber);
+			this.latestTurn = Math.max(this.latestTurn, turnNum);
 
-		this.displayTurn(turnNumber);
+		this.displayTurn(turnNum);
 
-		if(gameOver) {
+		if(turn.gameOver) {
 			this.gameOver = true;
-			showMsg(win ? "Win!!!1" : "Lose :(((");
+			showMsg(this.gameTurns[this.latestTurn].win ? "Win!!!1" : "Lose :(((");
 		}
 	}
 
-	updateDebug({turnNumber : turn, debug, toClearCoords}) {
+	updateDebug({turnNumber : turn, debug}) {
 		/* How the client indicates a cell is flagged (v. specific to python
 		client). */
 		const flaggedIndicator = info => info._state === "State.MINE";
 
 		this.debugInfo[turnNumber] = debug;
 
-		this.toClearCoords[turnNumber] = toClearCoords;
-
-		this.flaggedCoords[turnNumber] = [];
-		if(debug && debug.cellInfo) {
-			$.each(debug.cellInfo, (key, cellInfo) => {
-				if(flaggedIndicator(cellInfo))
-					this.flaggedCoords[turnNumber].push(cellInfo.coords);
-			});
-		}
+		// this.flaggedCoords[turnNumber] = [];
+		// if(debug && debug.cellInfo) {
+		// 	$.each(debug.cellInfo, (key, cellInfo) => {
+		// 		if(flaggedIndicator(cellInfo))
+		// 			this.flaggedCoords[turnNumber].push(cellInfo.coords);
+		// 	});
+		// }
 	}
 
 	clearCells(cells) {
@@ -388,6 +362,9 @@ class GameCell {
 	}
 
 	changeState(newStateName, surrCount) {
+		if(this.state === newStateName)
+			return;
+
 		const states = {
 			flagged : {
 				cellState : cellState.FLAGGED,

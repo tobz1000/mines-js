@@ -52,7 +52,7 @@ const gameSchema = new mg.Schema({
 		}
 	],
 	gridArray : [ String ]
-});
+}, schemaOptions);
 
 const gameMethods = {
 	methods : {
@@ -110,28 +110,21 @@ const gameMethods = {
 
 			return ret;
 		},
-		userStateTurn : function(turn_num) {
-			if(turn_num > this.turn)
+		userStateTurn : function(turnNum) {
+			if(turnNum > this.turnNum)
 			{
 				throw new ReqError("turn number too high", {
-					requestedTurn : turn_num,
-					currentTurn : this.turn
+					requestedTurn : turnNum,
+					currentTurn : this.turnNum
 				});
 			}
 
-			const turn = this.turns[turn_num];
-
-			return {
+			return _.extend({
 				id : this.id,
-				// TODO: seed parameter
 				dims : this.dims,
 				mines : this.mines,
-				newCellData : turn.clearActual,
-				gameOver : turn.gameOver,
-				win : turn.win,
-				cellsRem : turn.cellsRem,
-				turn : turn_num,
-			};
+				turnNum : turnNum
+			}, this.turns[turnNum].toObject());
 		},
 	},
 	statics : {
@@ -183,10 +176,10 @@ const gameVirtuals = {
 	},
 
 	userState : function() {
-		return this.userStateTurn(this.turn);
+		return this.userStateTurn(this.turnNum);
 	},
 
-	turn : function() {
+	turnNum : function() {
 		return this.turns.length - 1;
 	}
 };
@@ -197,16 +190,16 @@ _.each(gameVirtuals, (fn, name) => {
 });
 /*
  * Allows accessing properties of latest turn from root of schema, e.g.
- * "game.gameOver" instead of "game.turns[game.turn - 1].gameOver".
+ * "game.gameOver" instead of "game.turns[game.turnNum - 1].gameOver".
  */
 _.each(gameSchema.tree.turns[0], (type, key) => {
 	if(key === "_id")
 		return;
 
 	gameSchema.virtual(key).get(function() {
-		return this.turns[this.turn][key];
+		return this.turns[this.turnNum][key];
 	}).set(function(val) {
-		this.turns[this.turn][key] = val;
+		this.turns[this.turnNum][key] = val;
 	});
 })
 
@@ -252,7 +245,7 @@ const listGames = () => {
 
 const gameState = async ({id, turn}) => {
 	const game = await loadGame(id);
-	return game.userStateTurn(turn || game.turn);
+	return game.userStateTurn(turn || game.turnNum);
 };
 
 const clearCells = async ({id, coords, pass}) => {
