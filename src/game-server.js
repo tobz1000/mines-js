@@ -90,10 +90,13 @@ const gameMethods = {
 					}
 				}
 			}
+
+			this.markModified('gridArray');
 		},
 		surroundingCoords : function(coords) {
 			let ret = [];
-			for (let offset of product.repeatProduct([-1, 0, 1], coords.length)) {
+			const offsets = product.repeatProduct([-1, 0, 1], coords.length);
+			for (let offset of offsets) {
 				// Don't include self
 				if(offset.every(c => c === 0))
 					continue;
