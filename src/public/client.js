@@ -95,6 +95,7 @@ const showMsg = msg => {
 /* Send a request to the server; optionally perform an action based on the
 response. */
 const serverAction = async (action, req) => {
+	console.log(req);
 	/* TODO - proper 'fail' handler, once the server gives proper HTTP codes */
 	const resp = JSON.parse(
 		await $.post('server/' + action, JSON.stringify(req))
@@ -136,6 +137,9 @@ class ClientGame {
 		this.debugInfo = {};
 		this.currentTurn = -1;
 		this.gameOver = false;
+
+		this.toFlag = new Set();
+		this.toUnflag = new Set();
 
 		this.newGameTable();
 
@@ -268,6 +272,7 @@ class ClientGame {
 		// }
 	}
 
+	/* Clear specified cells, and "flush" flags/unflags to server */
 	clearCells(cells) {
 		if(cells.length === 0)
 			return;
@@ -278,8 +283,13 @@ class ClientGame {
 		serverAction("turn", {
 			id: this.id,
 			pass: this.pass,
-			coords: cells.map(c => c.coords)
+			clear: cells.map(c => c.coords),
+			flag: Array.from(this.toFlag).map(c => c.coords),
+			unflag: Array.from(this.toUnflag).map(c => c.coords),
 		});
+
+		this.toFlag.clear();
+		this.toUnflag.clear();
 	}
 
 	getCell([x, y]) {
@@ -363,15 +373,26 @@ class GameCell {
 			.cellInfo[this.coords.toString()];
 	}
 
-	changeState(newStateName, surrCount) {
-		if(this.state === newStateName)
-			return;
+	toggleFlag(flagUp) {
+		console.log(`${this.coords} flag:${flagUp}`);
+		const [addSet, removeSet, newState] = flagUp ?
+			[this.game.toFlag, this.game.toUnflag, "flagged"] :
+			[this.game.toUnflag, this.game.toFlag, "unknown"];
 
+		this.changeState(newState);
+
+		/* Only add to set if not currently in the other set (i.e. flag then
+		unflag == no action) */
+		if(!removeSet.delete(this))
+			addSet.add(this);
+	}
+
+	changeState(newStateName, surrCount) {
 		const states = {
 			flagged : {
 				cellState : cellState.FLAGGED,
 				class : 'cellFlagged',
-				contextmenu : () => { this.changeState('unknown'); },
+				contextmenu : () => { this.toggleFlag(false); },
 			},
 			mine : {
 				class : 'cellMine'
@@ -383,7 +404,7 @@ class GameCell {
 					this.hover(false);
 					this.game.clearCells([ this ]);
 				},
-				contextmenu : () => { this.changeState('flagged'); },
+				contextmenu : () => { this.toggleFlag(true); },
 				mouseover : () => { this.hover(true); },
 				mouseout : () => { this.hover(false); }
 			},

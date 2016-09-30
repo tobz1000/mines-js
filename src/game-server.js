@@ -12,7 +12,8 @@ mg.Promise = global.Promise;
 const cellState = {
 	EMPTY: 'empty',
 	MINE: 'mine',
-	CLEARED: 'cleared'
+	CLEARED: 'cleared',
+	FLAGGED: 'flag'
 };
 
 const renameIdKey = (doc, ret) => {
@@ -46,17 +47,21 @@ const gameSchema = new mg.Schema({
 					state : String
 				}
 			],
+			flagged : [ coordsType ],
+			unflagged : [ coordsType ],
 			gameOver : Boolean,
 			win : Boolean,
 			cellsRem : Number
 		}
 	],
-	gridArray : [ String ]
+	cellArray : [ String ],
+	flagArray : [ Boolean ]
 }, schemaOptions);
 
 const gameMethods = {
+	/* Methods must be fat functions for "this"-binding */
 	methods : {
-		clearCells : function(coordsArr, pass) {
+		turn : function({clear, flag, unflag, pass}) {
 			if(this.pass && this.pass !== pass)
 				throw new ReqError("Incorrect password");
 
@@ -64,13 +69,23 @@ const gameMethods = {
 				throw new ReqError("Game over!");
 
 			this.turns.push({
-				clearReq: coordsArr,
+				clearReq: clear,
 				clearActual: [],
+				flagged : undefined,
+				unflagged : undefined,
 				gameOver : false,
 				win : false,
 				cellsRem : this.cellsRem
 			});
 
+			this.clearCells(clear);
+			this.flagCells(flag, unflag);
+
+			this.markModified('cellArray');
+			this.markModified('flagArray');
+		},
+
+		clearCells : function(coordsArr) {
 			const coordsStack = coordsArr.slice();
 
 			let coords;
@@ -90,9 +105,27 @@ const gameMethods = {
 					}
 				}
 			}
-
-			this.markModified('gridArray');
 		},
+
+		flagCells : function(flag, unflag) {
+			for(const [arr, otherArr, toFlag, dest] of [
+				[flag, unflag, true, "flagged"],
+				[unflag, flag, false, "unflagged"]
+			]) {
+				/* Set should be quicker for comparing flagged list against
+				unflagged*/
+				const otherSet = new Set(otherArr);
+				const arrActual = arr.filter(c =>
+					!otherSet.has(c) &&
+					this.flagGrid.get(...c) !== toFlag
+				);
+
+				arrActual.forEach(c => this.flagGrid.set(...c, toFlag));
+
+				this[dest] = arrActual;
+			}
+		},
+
 		surroundingCoords : function(coords) {
 			let ret = [];
 			const offsets = product.repeatProduct([-1, 0, 1], coords.length);
@@ -113,6 +146,7 @@ const gameMethods = {
 
 			return ret;
 		},
+
 		userStateTurn : function(turnNum) {
 			if(turnNum > this.turnNum)
 			{
@@ -129,6 +163,16 @@ const gameMethods = {
 				turnNum : turnNum
 			}, this.turns[turnNum].toObject());
 		},
+
+		getGrid : function(array) {
+			if(!this.grids)
+				this.grids = new WeakMap();
+
+			if(!this.grids.has(array))
+				this.grids.set(array, ndArray(array, this.dims));
+
+			return this.grids.get(array);
+		}
 	},
 	statics : {
 		newGameState : ({dims, mines, pass}) => {
@@ -143,10 +187,12 @@ const gameMethods = {
 				});
 			}
 
-			const gridArray = _.shuffle(new Array(size)
+			const cellArray = _.shuffle(new Array(size)
 				.fill(cellState.MINE, 0, mines)
 				.fill(cellState.EMPTY, mines, size)
 			);
+
+			const flagArray = new Array(size).fill(false, size);
 
 			return {
 				pass : pass,
@@ -163,7 +209,8 @@ const gameMethods = {
 						cellsRem : size - mines
 					}
 				],
-				gridArray : gridArray
+				cellArray : cellArray,
+				flagArray : flagArray
 			};
 		}
 	},
@@ -171,11 +218,12 @@ const gameMethods = {
 
 /* Virtuals must be fat functions for "this"-binding */
 const gameVirtuals = {
-	gameGrid : function() {
-		if(!this._gameGrid)
-			this._gameGrid = ndArray(this.gridArray, this.dims);
+	cellGrid : function(){
+		return this.getGrid(this.cellArray);
+	},
 
-		return this._gameGrid;
+	flagGrid : function(){
+		return this.getGrid(this.flagArray);
 	},
 
 	userState : function() {
@@ -251,16 +299,16 @@ const gameState = async ({id, turn}) => {
 	return game.userStateTurn(turn || game.turnNum);
 };
 
-const clearCells = async ({id, coords, pass}) => {
-	const game = await loadGame(id);
+const turn = async (params) => {
+	const game = await loadGame(params.id);
 
-	game.clearCells(coords, pass);
+	game.turn(params);
 	game.save();
 
 	const state = game.userState;
 
-	if(watchGame[id])
-		watchGame[id].send(state);
+	if(watchGame[params.id])
+		watchGame[params.id].send(state);
 
 	return state;
 };
@@ -280,7 +328,7 @@ const watchGame = async ({id}) => {
 	return watchGame[id];
 }
 
-/* Representation of a cell in the grid. gets/sets gameGrid state. */
+/* Representation of a cell in the grid. gets/sets cellGrid state. */
 class Cell {
 	constructor(game, coords) {
 		this.coords = coords;
@@ -299,7 +347,7 @@ class Cell {
 	}
 
 	get state() {
-		return this.game.gameGrid.get(...this.coords);
+		return this.game.cellGrid.get(...this.coords);
 	}
 
 	get info() {
@@ -317,7 +365,7 @@ class Cell {
 		}
 
 		if(this.state === cellState.EMPTY) {
-			this.game.gameGrid.set(...this.coords.concat(cellState.CLEARED));
+			this.game.cellGrid.set(...this.coords, cellState.CLEARED);
 
 			if(--this.game.cellsRem <= 0) {
 				this.game.gameOver = true;
@@ -340,7 +388,7 @@ module.exports = {
 			// schema : clearCellsSchema,
 			// returnSchema : gameStateSchema,
 			type : "post",
-			handler : clearCells
+			handler : turn
 		},
 		status : {
 			type : "post",
