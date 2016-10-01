@@ -192,10 +192,10 @@ class ClientGame {
 		const start = (reverse ? newTurn : this.currentTurn) + 1;
 		const end = reverse ? this.currentTurn : newTurn;
 
-		/* Reset any highlighted "to clear" cells if going backwards. */
-		if(reverse && this.currentTurn !== this.latestTurn) {
+		/* Reset any highlighted "to clear" cells. */
+		if(this.currentTurn !== this.latestTurn) {
 			for (let coords of this.gameTurns[this.currentTurn + 1].clearReq)
-				this.getCell(coords).changeState('unknown');
+				this.getCell(coords).$elm.removeClass('cellToClear');
 		}
 
 		/* Set all cell data between old turn and new turn, or remove it if
@@ -212,7 +212,7 @@ class ClientGame {
 		/* Set new "to clear" cells */
 		if(newTurn !== this.latestTurn) {
 			for (let coords of this.gameTurns[newTurn + 1].clearReq)
-				this.getCell(coords).changeState('toClear');
+				this.getCell(coords).$elm.addClass('cellToClear');
 		}
 
 		$gameArea.prepend(this.$gameTable);
@@ -417,9 +417,6 @@ class GameCell {
 					() => { this.hoverSurrounding(true); } : undefined,
 				mouseout : surrCount > 0 ?
 					() => { this.hoverSurrounding(false); } : undefined
-			},
-			toClear : {
-				class : 'cellToClear'
 			}
 		};
 
