@@ -95,7 +95,6 @@ const showMsg = msg => {
 /* Send a request to the server; optionally perform an action based on the
 response. */
 const serverAction = async (action, req) => {
-	console.log(req);
 	/* TODO - proper 'fail' handler, once the server gives proper HTTP codes */
 	const resp = JSON.parse(
 		await $.post('server/' + action, JSON.stringify(req))
@@ -110,11 +109,6 @@ const serverAction = async (action, req) => {
 	}
 
 	return resp;
-};
-
-const cellState = {
-	UNKNOWN : "u",
-	FLAGGED : "f"
 };
 
 class ClientGame {
@@ -186,6 +180,13 @@ class ClientGame {
 		if(this.latestTurn === undefined || !this.gameTurns[this.latestTurn])
 			return;
 
+		/* Map received JSON state strings to the corresponding cell.state
+		value.*/
+		const serverStateMap = {
+			"cleared" : "cleared",
+			"mine" : "mine"
+		};
+
 		this.$gameTable.detach();
 		const reverse = newTurn < this.currentTurn;
 		const start = (reverse ? newTurn : this.currentTurn) + 1;
@@ -202,7 +203,7 @@ class ClientGame {
 		for (let i = start; i <= end; i++) {
 			for (let cellData of this.gameTurns[i].clearActual) {
 				this.getCell(cellData.coords).changeState(
-					reverse ? 'unknown' : cellData.state,
+					reverse ? 'unknown' : serverStateMap[cellData.state],
 					cellData.surrounding
 				);
 			}
@@ -351,7 +352,7 @@ class GameCell {
 	hover(hoverOn) {
 		this.$elm.toggleClass(
 			"cellHover",
-			hoverOn && this.state === cellState.UNKNOWN
+			hoverOn && this.state === "unknown"
 		);
 	}
 
@@ -364,7 +365,7 @@ class GameCell {
 		this.hoverSurrounding(false);
 
 		this.game.clearCells(
-			this.surroundingCells.filter(c => c.state === cellState.UNKNOWN)
+			this.surroundingCells.filter(c => c.state === "unknown")
 		);
 	}
 
@@ -390,7 +391,6 @@ class GameCell {
 	changeState(newStateName, surrCount) {
 		const states = {
 			flagged : {
-				cellState : cellState.FLAGGED,
 				class : 'cellFlagged',
 				contextmenu : () => { this.toggleFlag(false); },
 			},
@@ -398,7 +398,6 @@ class GameCell {
 				class : 'cellMine'
 			},
 			unknown : {
-				cellState : cellState.UNKNOWN,
 				class : 'cellUnknown',
 				click : () => {
 					this.hover(false);
@@ -409,7 +408,6 @@ class GameCell {
 				mouseout : () => { this.hover(false); }
 			},
 			cleared : {
-				cellState : surrCount,
 				class : 'cellCleared',
 				text : surrCount > 0 ? surrCount : undefined,
 				click : surrCount > 0 ? () => {
@@ -440,7 +438,7 @@ class GameCell {
 				this.$elm.removeClass(states[s].class);
 		}
 
-		this.state = newState.cellState;
+		this.state = newStateName;
 		this.$elm.addClass(newState.class);
 		this.$elm.text(newState.text);
 

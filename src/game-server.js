@@ -10,10 +10,9 @@ const ReqError = require("./error").ReqError;
 mg.Promise = global.Promise;
 
 const cellState = {
-	EMPTY: 'empty',
-	MINE: 'mine',
-	CLEARED: 'cleared',
-	FLAGGED: 'flag'
+	EMPTY: "empty",
+	MINE: "mine",
+	CLEARED: "cleared",
 };
 
 const renameIdKey = (doc, ret) => {
