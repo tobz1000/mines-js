@@ -1,8 +1,5 @@
 "use strict";
 
-/* TODO: render latest turn only when switching games, instead of rendering all
-in turn. May need to implement something on the server to retrieve the current
-turn number. */
 /* TODO: store game passwords in cookies */
 /* TODO: prettier game list & turn list; highlight current game/turn */
 
@@ -201,10 +198,24 @@ class ClientGame {
 		/* Set all cell data between old turn and new turn, or remove it if
 		going backwards */
 		for (let i = start; i <= end; i++) {
-			for (let cellData of this.gameTurns[i].clearActual) {
+			for (const cellData of this.gameTurns[i].clearActual) {
 				this.getCell(cellData.coords).changeState(
-					reverse ? 'unknown' : serverStateMap[cellData.state],
+					reverse ? "unknown" : serverStateMap[cellData.state],
 					cellData.surrounding
+				);
+			}
+
+			/* TODO: incorrect to assume unflagging will go to unknown, since
+			server allows flagging of cleared cells*/
+			for(const coords of this.gameTurns[i].flagged) {
+				this.getCell(coords).changeState(
+					reverse ? "unknown" : "flagged"
+				);
+			}
+
+			for(const coords of this.gameTurns[i].unflagged) {
+				this.getCell(coords).changeState(
+					reverse ? "flagged" : "unknown"
 				);
 			}
 		}
