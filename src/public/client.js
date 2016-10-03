@@ -269,19 +269,7 @@ class ClientGame {
 	}
 
 	updateDebug({turnNumber : turn, debug}) {
-		/* How the client indicates a cell is flagged (v. specific to python
-		client). */
-		const flaggedIndicator = info => info._state === "State.MINE";
-
 		this.debugInfo[turnNumber] = debug;
-
-		// this.flaggedCoords[turnNumber] = [];
-		// if(debug && debug.cellInfo) {
-		// 	$.each(debug.cellInfo, (key, cellInfo) => {
-		// 		if(flaggedIndicator(cellInfo))
-		// 			this.flaggedCoords[turnNumber].push(cellInfo.coords);
-		// 	});
-		// }
 	}
 
 	/* Clear specified cells, and "flush" flags/unflags to server */

@@ -4,7 +4,7 @@
 
 const PythonShell = require("python-shell");
 
-const pythonRoot = __dirname + "/../py";
+const pythonRoot = __dirname + "/../../py";
 
 const games = [
 	{ dims : [4,4], mines : 3, server : "JSONServerWrapper", repeats : 5 },

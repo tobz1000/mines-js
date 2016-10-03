@@ -111,6 +111,9 @@ const gameMethods = {
 				[flag, unflag, true, "flagged"],
 				[unflag, flag, false, "unflagged"]
 			]) {
+				if(!arr)
+					continue;
+
 				/* Set should be quicker for comparing flagged list against
 				unflagged*/
 				const otherSet = new Set(otherArr);
