@@ -7,7 +7,7 @@ const PythonShell = require("python-shell");
 const pythonRoot = __dirname + "/../../py";
 
 const games = [
-	{ dims : [4,4], mines : 3, server : "JSONServerWrapper", repeats : 5 },
+	// { dims : [4,4], mines : 3, server : "JSONServerWrapper", repeats : 5 },
 	{ dims : [10,10], mines : 3, server : "JSONServerWrapper", repeats : 10 },
 ];
 
@@ -18,6 +18,6 @@ const ps = new PythonShell(
 		scriptPath : pythonRoot + "/src",
 		args : JSON.stringify(games)
 	},
-	(err, res) => err && console.log(err)
+	(err, res) => err && console.error(err)
 );
 ps.on("message", (msg) => console.log(msg));
