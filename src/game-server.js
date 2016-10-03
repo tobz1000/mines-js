@@ -53,14 +53,15 @@ const gameSchema = new mg.Schema({
 			cellsRem : Number
 		}
 	],
+	clients : [ String ],
 	cellArray : [ String ],
-	flagArray : [ Boolean ]
+	flagArray : [ Boolean ],
 }, schemaOptions);
 
 const gameMethods = {
 	/* Methods must be fat functions for "this"-binding */
 	methods : {
-		turn : function({clear, flag, unflag, pass}) {
+		turn : function({clear, flag, unflag, client, pass}) {
 			if(this.pass && this.pass !== pass)
 				throw new ReqError("Incorrect password");
 
@@ -74,8 +75,12 @@ const gameMethods = {
 				unflagged : undefined,
 				gameOver : false,
 				win : false,
-				cellsRem : this.cellsRem
+				cellsRem : this.cellsRem,
+				client : client
 			});
+
+			if(client && !this.clients.includes(client))
+				this.clients.push(client);
 
 			this.clearCells(clear);
 			this.flagCells(flag, unflag);
@@ -177,7 +182,7 @@ const gameMethods = {
 		}
 	},
 	statics : {
-		newGameState : ({dims, mines, pass}) => {
+		newGameState : ({dims, mines, client, pass}) => {
 			const size = dims.reduce((a, b) => a * b);
 			const max_mines = size - 1;
 
@@ -208,9 +213,11 @@ const gameMethods = {
 						clearActual : [],
 						gameOver : false,
 						win : false,
-						cellsRem : size - mines
+						cellsRem : size - mines,
+						client : client
 					}
 				],
+				clients : client ? [ client ] : [],
 				cellArray : cellArray,
 				flagArray : flagArray
 			};
@@ -234,7 +241,16 @@ const gameVirtuals = {
 
 	turnNum : function() {
 		return this.turns.length - 1;
-	}
+	},
+
+	// clients : function() {
+	// 	const ret = new Set();
+	// 	_.each(this.turns, (turn) => {
+	// 		if(turn.client)
+	// 			ret.add(turn.client);
+	// 	});
+	// 	return Array.from(ret);
+	// }
 };
 
 _.extend(gameSchema, gameMethods);
@@ -293,7 +309,7 @@ const newGame = async (params) => {
 }
 
 const listGames = () => {
-	return Game.find({}, "id dims mines");
+	return Game.find({}, "id dims mines clients");
 }
 
 const gameState = async ({id, turn}) => {
