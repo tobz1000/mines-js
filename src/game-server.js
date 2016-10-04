@@ -186,7 +186,7 @@ const gameMethods = {
 			const size = dims.reduce((a, b) => a * b);
 			const max_mines = size - 1;
 
-			if(mines >= max_mines) {
+			if(mines > max_mines) {
 				throw new ReqError("too many mines", {
 					requestedSize : size,
 					maxMines : max_mines,

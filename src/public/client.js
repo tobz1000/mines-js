@@ -16,6 +16,46 @@ $(() => {
 	refreshGameList();
 });
 
+const $listItemProp = (type, text) => {
+	const { icon, minChars } = {
+		id : {
+			icon : "fa-hashtag",
+			minChars : 24,
+		},
+		dims : {
+			icon : "fa-th",
+			minChars : 5,
+		},
+		mines : {
+			icon : "fa-bomb",
+			minChars : 3,
+		},
+		playable : {
+			icon : "fa-gamepad",
+			minChars : 2
+		},
+		watchable : {
+			icon : "fa-binoculars",
+			minChars : 2
+		}
+	}[type];
+
+	const $elm = $("<span>");
+
+	console.log(icon);
+
+	if(minChars)
+		$elm.css({ "min-width" : minChars + "ch" });
+
+	if(text)
+		$elm.text(text);
+
+	if(icon)
+		$elm.prepend(`<i class="fa ${icon}">`);
+
+	return $elm;
+};
+
 const refreshGameList = async () => {
 	const games = await $.getJSON("server/games");
 
@@ -25,10 +65,19 @@ const refreshGameList = async () => {
 		/* TODO: race condition for display of "watchable"/"playable", if
 		the response from newGame() is received after the gameLister entry.
 		*/
-		const label = `${g.id} (${g.dims[0]}x${g.dims[1]}, ${g.mines}, ` +
-				`${gamePasses[g.id] ? "playable" : "watchable"})`;
+		const label =
+			`<span class="gameListId fa fa-hashtag"><${g.id}</span>` +
+			`<span class="gameListDims">${g.dims[0]}x${g.dims[1]}</span>` +
+			`<span class="gameListMines">${g.mines}</span>` +
+			`<span class="gamList${gamePasses[g.id] ? "Play" : "Watch"}">` +
+			`</span>`;
+
 		$gameList.append($("<li>")
-			.text(label)
+			// .html(label)
+			.append($listItemProp("id", g.id))
+			.append($listItemProp("dims", `${g.dims[0]}x${g.dims[1]}`))
+			.append($listItemProp("mines", g.mines))
+			.append($listItemProp(gamePasses[g.id] ? "playable" : "watchable"))
 			.click(() => { displayGame(g, gamePasses[g.id]); })
 		);
 	}

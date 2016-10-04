@@ -54,7 +54,7 @@ pre {
 	white-space: pre-wrap;
 }
 
-div#gameList {
+#gameList {
 	height: 240px;
 	width: 500px;
 	overflow:auto;
@@ -63,3 +63,25 @@ div#gameList {
 #gameList li, #turnList li {
 	font-family: monospace;
 }
+
+#gameList li span {
+	font-family: inherit;
+	display: inline-block;
+	margin-right: 5px;
+}
+
+/*.gameListId {
+	min-width: 24ch;
+}
+
+.gameListDims {
+	min-width: 5ch;
+}
+
+.gameListMines {
+	min-width: 3ch;
+}
+
+.gameListPlay, .gameListWatch {
+	min-width: 2ch;
+}*/

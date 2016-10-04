@@ -17,6 +17,7 @@
   ],
   "dependencies": {
     "jquery": "^2.2.3",
-    "json-formatter-js": "mohsen1/json-formatter-js#^1.0.0"
+    "json-formatter-js": "mohsen1/json-formatter-js#^1.0.0",
+    "components-font-awesome": "^4.6.3"
   }
 }
