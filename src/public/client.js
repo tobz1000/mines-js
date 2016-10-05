@@ -28,30 +28,27 @@ const $listItemProp = (type, text) => {
 		},
 		mines : {
 			icon : "fa-bomb",
-			minChars : 3,
+			minChars : 2,
 		},
 		playable : {
-			icon : "fa-gamepad",
-			minChars : 2
+			icon : "fa-gamepad"
 		},
 		watchable : {
-			icon : "fa-binoculars",
-			minChars : 2
+			icon : "fa-binoculars"
 		}
 	}[type];
 
+	const minWidth = (minChars || 0) + (icon ? 2 : 0);
 	const $elm = $("<span>");
-
-	console.log(icon);
-
-	if(minChars)
-		$elm.css({ "min-width" : minChars + "ch" });
 
 	if(text)
 		$elm.text(text);
 
 	if(icon)
 		$elm.prepend(`<i class="fa ${icon}">`);
+
+	if(minWidth)
+		$elm.css({ "min-width" : (minWidth) + "ch" });
 
 	return $elm;
 };
