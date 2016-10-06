@@ -64,24 +64,12 @@ pre {
 	font-family: monospace;
 }
 
-#gameList li span {
+#gameList li span, #turnList li span {
 	font-family: inherit;
 	display: inline-block;
 	margin-right: 5px;
 }
 
-/*.gameListId {
-	min-width: 24ch;
+.fa {
+	font-size: 70%;
 }
-
-.gameListDims {
-	min-width: 5ch;
-}
-
-.gameListMines {
-	min-width: 3ch;
-}
-
-.gameListPlay, .gameListWatch {
-	min-width: 2ch;
-}*/

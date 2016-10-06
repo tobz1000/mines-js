@@ -35,17 +35,28 @@ const $listItemProp = (type, text) => {
 		},
 		watchable : {
 			icon : "fa-binoculars"
-		}
+		},
+		clearReq : {
+			icon : "fa-paint-brush",
+			minChars : 2,
+		},
+		clearActual : {
+			icon : "fa-long-arrow-right",
+			minChars : 2,
+		},
+		percComplete : {
+			minChars : 3,
+		},
 	}[type];
 
 	const minWidth = (minChars || 0) + (icon ? 2 : 0);
 	const $elm = $("<span>");
 
-	if(text)
-		$elm.text(text);
-
 	if(icon)
-		$elm.prepend(`<i class="fa ${icon}">`);
+		$elm.append(`<i class="fa ${icon}">`);
+
+	if(text)
+		$elm.append(text);
 
 	if(minWidth)
 		$elm.css({ "min-width" : (minWidth) + "ch" });
@@ -62,15 +73,7 @@ const refreshGameList = async () => {
 		/* TODO: race condition for display of "watchable"/"playable", if
 		the response from newGame() is received after the gameLister entry.
 		*/
-		const label =
-			`<span class="gameListId fa fa-hashtag"><${g.id}</span>` +
-			`<span class="gameListDims">${g.dims[0]}x${g.dims[1]}</span>` +
-			`<span class="gameListMines">${g.mines}</span>` +
-			`<span class="gamList${gamePasses[g.id] ? "Play" : "Watch"}">` +
-			`</span>`;
-
 		$gameList.append($("<li>")
-			// .html(label)
 			.append($listItemProp("id", g.id))
 			.append($listItemProp("dims", `${g.dims[0]}x${g.dims[1]}`))
 			.append($listItemProp("mines", g.mines))
@@ -290,15 +293,17 @@ class ClientGame {
 		const turnNum = turn.turnNum;
 		this.gameTurns[turnNum] = turn;
 
+		const percComp =
+			100 * (1 - (turn.cellsRem / this.gameTurns[0].cellsRem));
+
 		$("#turnList").append($(`<li value=${turnNum}>`)
 			.click(() => {
 				if(this.currentTurn !== turnNum)
 					this.displayTurn(turnNum);
 			})
-			.text(
-				`R: ${turn.clearReq.length} C: ${turn.clearActual.length} ` +
-				`L: ${turn.cellsRem}`
-			)
+			.append($listItemProp("clearReq", `${turn.clearReq.length}`))
+			.append($listItemProp("clearActual", `${turn.clearActual.length}`))
+			.append($listItemProp("percComplete", `${percComp.toFixed()}%`))
 		);
 
 		/* Wait for initial latestTurn value from server before attempting to
@@ -420,7 +425,6 @@ class GameCell {
 	}
 
 	toggleFlag(flagUp) {
-		console.log(`${this.coords} flag:${flagUp}`);
 		const [addSet, removeSet, newState] = flagUp ?
 			[this.game.toFlag, this.game.toUnflag, "flagged"] :
 			[this.game.toUnflag, this.game.toFlag, "unknown"];
