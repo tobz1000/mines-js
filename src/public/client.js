@@ -47,6 +47,12 @@ const $listItemProp = (type, text) => {
 		percComplete : {
 			minChars : 3,
 		},
+		win : {
+			icon : "fa-trophy"
+		},
+		lose : {
+			icon : "fa-bomb"
+		}
 	}[type];
 
 	const minWidth = (minChars || 0) + (icon ? 2 : 0);
@@ -293,18 +299,29 @@ class ClientGame {
 		const turnNum = turn.turnNum;
 		this.gameTurns[turnNum] = turn;
 
-		const percComp =
-			100 * (1 - (turn.cellsRem / this.gameTurns[0].cellsRem));
+		const listEntryItems = [
+			[ "clearReq", `${turn.clearReq.length}` ],
+			[ "clearActual", `${turn.clearActual.length}` ]
+		];
 
-		$("#turnList").append($(`<li value=${turnNum}>`)
-			.click(() => {
-				if(this.currentTurn !== turnNum)
-					this.displayTurn(turnNum);
-			})
-			.append($listItemProp("clearReq", `${turn.clearReq.length}`))
-			.append($listItemProp("clearActual", `${turn.clearActual.length}`))
-			.append($listItemProp("percComplete", `${percComp.toFixed()}%`))
-		);
+		if(turn.gameOver)
+			listEntryItems.push(turn.win ? [ "win" ] : [ "lose" ])
+		else {
+			const percComp =
+				100 * (1 - (turn.cellsRem / this.gameTurns[0].cellsRem));
+
+			listEntryItems.push([ "percComplete", `${percComp.toFixed()}%` ]);
+		}
+
+		const $elm = $(`<li value=${turnNum}>`).click(() => {
+			if(this.currentTurn !== turnNum)
+				this.displayTurn(turnNum);
+		})
+
+		for(const [ type, text ] of listEntryItems)
+			$elm.append($listItemProp(type, text));
+
+		$("#turnList").append($elm);
 
 		/* Wait for initial latestTurn value from server before attempting to
 		update it */
@@ -313,10 +330,8 @@ class ClientGame {
 
 		this.displayTurn(turnNum);
 
-		if(turn.gameOver) {
+		if(turn.gameOver)
 			this.gameOver = true;
-			showMsg(this.gameTurns[this.latestTurn].win ? "Win!!!1" : "Lose :(((");
-		}
 	}
 
 	updateDebug({turnNumber : turn, debug}) {
