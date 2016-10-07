@@ -330,8 +330,7 @@ class ClientGame {
 
 		this.displayTurn(turnNum);
 
-		if(turn.gameOver)
-			this.gameOver = true;
+		this.gameOver |= turn.gameOver;
 	}
 
 	updateDebug({turnNumber : turn, debug}) {
