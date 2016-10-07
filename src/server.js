@@ -17,7 +17,7 @@ const serverInit = () => {
 
 	const app = express();
 
-	app.use("/", express.static("src/public"));
+	app.use("/", express.static("public"));
 
 	const entitiesReady = entityPaths.map(async ({path, entity}) => {
 		if(entity.init)

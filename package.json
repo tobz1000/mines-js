@@ -9,15 +9,20 @@
     "ajv": "^4.1.7",
     "assert-type": "^0.1.0",
     "babel-cli": "^6.11.4",
+    "babel-core": "^6.17.0",
+    "babel-loader": "^6.2.5",
     "babel-plugin-transform-regenerator": "^6.11.4",
+    "babel-polyfill": "^6.16.0",
+    "babel-preset-latest": "^6.16.0",
+    "babel-preset-react": "^6.16.0",
     "check-type": "^0.4.11",
     "check-types": "^6.0.0",
     "command-line-args": "^2.1.6",
+    "css-loader": "^0.25.0",
     "event-source": "^0.1.1",
     "express": "^4.13.4",
     "express-eventsource": "^0.0.4",
-    "jade": "^1.11.0",
-    "jquery": "^2.2.2",
+    "jquery": "^2.2.4",
     "json-over-tcp": "^0.3.2",
     "json-socket": "^0.1.2",
     "jsonsocket": "^1.0.2",
@@ -26,13 +31,26 @@
     "ndarray": "^1.0.18",
     "node-inspector": "^0.12.7",
     "python-shell": "^0.4.0",
+    "react": "^15.3.2",
+    "react-dom": "^15.3.2",
+    "style-loader": "^0.13.1",
     "underscore": "^1.8.3"
   },
   "devDependencies": {},
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "babel-node src/server.js"
+    "start": "babel-node src/server.js",
+    "build": "webpack -d"
   },
   "author": "Toby Dimmick <tobydimmick@protonmail.ch>",
-  "license": "MIT"
+  "license": "MIT",
+  "babel": {
+    "plugins": [
+      "syntax-async-functions",
+      "transform-regenerator"
+    ],
+    "presets": [
+      "react"
+    ]
+  }
 }

@@ -1,12 +1,17 @@
-<script src="public_lib/jquery/dist/jquery.min.js"></script>
-<script src="public_lib/json-formatter-js/dist/bundle.js"></script>
-<script src="client.js"></script>
-<link rel="stylesheet" href="public_lib/components-font-awesome/css/font-awesome.min.css">
-<link rel="stylesheet" type="text/css" href="client.css" />
+<!DOCTYPE html>
+<html>
+<head>
+<link rel="stylesheet" href="public-lib/components-font-awesome/css/font-awesome.min.css">
+<link rel="stylesheet" href="client.css">
+<script src="dist/bundle.js"></script>
+</head>
+
+<body>
 <div id="gameArea"></div>
 
 <br>
 <br>
+
 <label for="mineCount">Mines:</label>
 <input type="number" id="mineCount" min="1" placeholder="10">
 <label for="dims0">Columns:</label>
@@ -20,3 +25,5 @@
 
 <button id="gameListRefresh">Refresh list</button>
 <div id="gameList"><ul></ul></div>
+</body>
+</html>

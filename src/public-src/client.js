@@ -1,5 +1,9 @@
 "use strict";
 
+import "react";
+import $ from "jquery";
+import "json-formatter-js";
+
 /* TODO: store game passwords in cookies */
 /* TODO: prettier game list & turn list; highlight current game/turn */
 
