@@ -173,7 +173,7 @@ class ClientGame {
 			throw new Error("Only 2d games supported");
 
 		/* Add constructor args to the ClientGame */
-		$.extend(this, {id, dims, mines, pass, showDebug});
+		Object.assign(this, {id, dims, mines, pass, showDebug});
 
 		this.serverWatcher = new EventSource(`server/watch?id=${id}&from=0`);
 		this.serverWatcher.addEventListener("message", (resp) => {

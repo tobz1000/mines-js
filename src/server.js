@@ -44,7 +44,7 @@ const responsePoster = (handler) => {
 	const reqHandler = async (post, get, resp) => {
 		let responseObj;
 		try {
-			const params = _.extend({}, post && JSON.parse(post), get);
+			const params = Object.assign({}, post && JSON.parse(post), get);
 			responseObj = await handler(params);
 		} catch(e) {
 			if(e instanceof SyntaxError)

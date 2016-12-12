@@ -163,7 +163,7 @@ const gameMethods = {
 				});
 			}
 
-			return _.extend({
+			return Object.assign({
 				id : this.id,
 				dims : this.dims,
 				mines : this.mines,
@@ -253,7 +253,7 @@ const gameVirtuals = {
 	// }
 };
 
-_.extend(gameSchema, gameMethods);
+Object.assign(gameSchema, gameMethods);
 _.each(gameVirtuals, (fn, name) => {
 	gameSchema.virtual(name).get(fn);
 });
