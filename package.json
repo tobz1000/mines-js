@@ -11,6 +11,7 @@
     "babel-cli": "^6.11.4",
     "babel-core": "^6.17.0",
     "babel-loader": "^6.2.5",
+    "babel-plugin-transform-class-properties": "^6.19.0",
     "babel-plugin-transform-regenerator": "^6.11.4",
     "babel-polyfill": "^6.16.0",
     "babel-preset-latest": "^6.16.0",
@@ -47,7 +48,8 @@
   "babel": {
     "plugins": [
       "syntax-async-functions",
-      "transform-regenerator"
+      "transform-regenerator",
+      "transform-class-properties"
     ],
     "presets": [
       "react"

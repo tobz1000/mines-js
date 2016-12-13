@@ -1,6 +1,5 @@
-"use strict";
-
-import "react";
+import React from "react";
+import ReactDOM from "react-dom";
 import $ from "jquery";
 import "json-formatter-js";
 
@@ -281,7 +280,7 @@ class ClientGame {
 
 		/* Set new "to clear" cells */
 		if(newTurn !== this.latestTurn) {
-			for (let coords of this.gameTurns[newTurn + 1].clearReq)
+			for(let coords of this.gameTurns[newTurn + 1].clearReq)
 				this.getCell(coords).$elm.addClass('cellToClear');
 		}
 
