@@ -64,16 +64,18 @@ class CellInfoArray extends Array {
 			};
 		}
 
-	set(key, val) {
-		this[key] = val;
+		return this[key];
 	}
 
-		return this[key];
+	set(key, val) {
+		this[key] = val;
 	}
 }
 
 class ClientGame extends React.Component {
 	constructor(props) {
+		super(props);
+
 		if(props.dims.length !== 2)
 			throw new Error("Only 2d games supported");
 
@@ -85,6 +87,8 @@ class ClientGame extends React.Component {
 			this.updateDebug(JSON.parse(data));
 		});
 
+		// this._surroundingCells = new Map;
+
 		/* TODO: which of these shouldn't be in "state" (if any)? */
 		this.state = {
 			gameTurns : {}
@@ -94,6 +98,7 @@ class ClientGame extends React.Component {
 			gameOver : false,
 			toFlag : new Set(),
 			toUnflag : new Set(),
+			toClear : new Set(),
 			statusMsg : undefined
 		};
 
@@ -103,6 +108,20 @@ class ClientGame extends React.Component {
 			this.setState({ latestTurn : turnNum });
 			this.displayTurn(turnNum);
 		}).catch(showMsg);
+	}
+
+	performTurn() {
+		const { id, pass } = this.props;
+		const { toFlag, toUnflag, toClear : clear} = this.state;
+
+		const turnParams = { id, pass };
+
+
+
+		if(!flag.size && !unflag.size && !clear.size)
+			return;
+
+		serverAction("turn", { id, pass, clear, flag, unflag });
 	}
 
 	updateTurnInfo({
@@ -170,42 +189,50 @@ class ClientGame extends React.Component {
 		this.serverWatcher.close();
 	}
 
-	onGameGridEvent(evt) {
-
+	cellInfo(x, y) {
+		return this.state.gameTurns[this.state.currentTurn].get(x, y);
 	}
 
-	render() {
-		const { turns, debugInfo, gameTurns, currentTurn, statusMsg } = this.state;
+	surroundingCells(x, y) {
+		const [dim_x, dim_y] = this.props.dims;
+		// if(!this._surroundingCells.has(cellInfo)) {
+		const surr = [];
 
-		return (
-			<GameGrid
-				dims={this.props.dims}
-				turnInfo={gameTurns[currentTurn]}
-				onEvent=onGameGridEvent
-			/>
-			// <TurnList {...{ currentTurn, turns }} />
-			// <DebugArea {...{ debugInfo }} />
-			// <br />
-			// <StatusInfo msg={statusMsg} />
-		);
+		for (let i of [-1, 0, 1]) {
+			for (let j of [-1, 0, 1]) {
+				if(i === 0 && j === 0)
+					continue;
+
+				const off_x = x + i, off_y = y + j;
+
+				if(off_x >= 0 && off_y >= 0 && off_x < dim_y & off_y < dim_x)
+					surr.push([off_x, off_y]);
+			}
+		}
+
+		return surr;
+
+		// 	this._surroundingCells.set(cellInfo, surr);
+		// }
+
+		// return this._surroundingCells.get(cellInfo);
 	}
-}
 
-class GameGrid extends React.Component {
-	cellEventFn (x, y) {
+	cellEventFn(x, y) {
+		{ currentTurn, gameTurns } = this.state;
+
 		return (ev) => ({
 			"onClick" : this.cellClicked,
 			"onMouseEnter" : this.cellHoveredOn,
 			"onMouseLeave" : this.cellHoveredOff,
 			"onContextMenu" : this.cellRightClicked
-		}[ev](this.props.turnInfo.get(x, y)));
+		}[ev](x, y, gameTurns[currentTurn].get(x, y)));
 	}
 
-	cellClicked(cellInfo) {
-		if(cellInfo.cellState === "unknown")
-			this.props.onEvent("clear");
+	cellClicked(x, y, {cellState}) {
+		if(cellState === "unknown") {}
 
-		if(cellInfo.cellState === "cleared") {
+		if(cellState === "cleared") {
 			for c of surroundingCells.get(cellInfo) {
 				if c.cellState === "unknown"{}
 			}
@@ -219,16 +246,34 @@ class GameGrid extends React.Component {
 	cellRightClicked(cellInfo) {}
 
 	render() {
+		const { turns, debugInfo, gameTurns, currentTurn, statusMsg } = this.state;
+
+		return (
+			<GameGrid
+				dims={this.props.dims}
+				turnInfo={gameTurns[currentTurn]}
+				cellEventFn=cellEventFn
+			/>
+			// <TurnList {...{ currentTurn, turns }} />
+			// <DebugArea {...{ debugInfo }} />
+			// <br />
+			// <StatusInfo msg={statusMsg} />
+		);
+	}
+}
+
+class GameGrid extends React.Component {
+	render() {
 		const [x_r, y_r] = this.props.dims;
+		const cellInfo = this.props.turnInfo.get(x, y);
 		return (
 			<div onContextMenu={e => e.preventDefault()}>
 				<table>{_.range(y_r).map(y =>
 					<tr key={y.toString()}>{_.range(x_r).map(x => {
 						<GameCell
 							key={x.toString()}
-							cellState={this.props.turnInfo.get(x, y).cellState}
-							surrCount={this.props.turnInfo.get(x, y).surrCount}
-							onEvent={cellEventFn(x, y)}
+							{{ ...cellInfo }}
+							onEvent={this.props.cellEventFn(x, y)}
 						/>
 					})}</tr>
 				)}</table>
@@ -240,11 +285,10 @@ class GameGrid extends React.Component {
 class GameCell extends React.Component {
 	render() {
 		const className = "cell laminate " + ({
-				flagged : 'cellFlagged',
-				mine  : 'cellMine',
-				unknown : 'cellUnknown',
-				cleared  : 'cellCleared',
-			}
+			flagged : 'cellFlagged',
+			mine  : 'cellMine',
+			unknown : 'cellUnknown',
+			cleared  : 'cellCleared',
 		}[this.props.cellState] || "");
 
 		if(this.props.hover && this.props.cellState === "unknown")
