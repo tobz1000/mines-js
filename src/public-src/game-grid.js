@@ -2,6 +2,7 @@ import React from "react";
 import ReactDOM from "react-dom";
 import ndArray from "ndarray";
 import $ from "jquery";
+import _ from "underscore";
 
 /* Send a request to the server; optionally perform an action based on the
 response. */
@@ -54,21 +55,25 @@ GameGrid.state = {
 
 /* Implements a get method for ndarray, which lazy-loads a new default cell
 state if empty */
-class CellInfoArray extends Array {
+class CellInfoArray {
+	constructor() {
+		this.arr = [];
+	}
+
 	get(key) {
-		if(!(key in this)) {
-			this[key] = {
+		if(!(key in this.arr)) {
+			this.arr[key] = {
 				cellState : "unknown",
 				surrCount : undefined,
 				flagged : false
 			};
 		}
 
-		return this[key];
+		return this.arr[key];
 	}
 
 	set(key, val) {
-		this[key] = val;
+		this.arr[key] = val;
 	}
 }
 
@@ -79,22 +84,21 @@ class ClientGame extends React.Component {
 		if(props.dims.length !== 2)
 			throw new Error("Only 2d games supported");
 
-		this.serverWatcher = new EventSource(`server/watch?id=${id}&from=0`);
-		this.serverWatcher.addEventListener("message", ({data}) => {
-			this.updateTurnInfo(JSON.parse(data));
-		});
-		showDebug && this.serverWatcher.addEventListener("debug", ({data}) => {
-			this.updateDebug(JSON.parse(data));
-		});
+		// this.serverWatcher = new EventSource(`server/watch?id=${id}&from=0`);
+		// this.serverWatcher.addEventListener("message", ({data}) => {
+		// 	this.updateTurnInfo(JSON.parse(data));
+		// });
+		// showDebug && this.serverWatcher.addEventListener("debug", ({data}) => {
+		// 	this.updateDebug(JSON.parse(data));
+		// });
 
 		// this._surroundingCells = new Map;
 
-		/* TODO: which of these shouldn't be in "state" (if any)? */
+		/* TODO: which mof these shouldn't be in "state" (if any)? */
 		this.state = {
-			gameTurns : {}
+			gameTurns : {},
 			// hoverInfo : ndArray([], this.props.dims),
 			currentTurn : -1,
-			latestTurn : undefined,
 			gameOver : false,
 			toFlag : new Set(),
 			toUnflag : new Set(),
@@ -102,12 +106,13 @@ class ClientGame extends React.Component {
 			statusMsg : undefined
 		};
 
-		/* Retrieve turn number from /status, so we know when the final SSE
-		 * message has been received */
-		serverAction("status", { id }).then(({turnNum}) => {
-			this.setState({ latestTurn : turnNum });
-			this.displayTurn(turnNum);
-		}).catch(showMsg);
+		$.getJSON("sample-turns.json").then(data => {
+			_.each(data, t => this.updateTurnInfo(t));
+		});
+
+		$.getJSON("sample-status.json").then(({turnNum}) => {
+			this.setState({ currentTurn : turnNum });
+		});
 	}
 
 	performTurn() {
@@ -146,8 +151,8 @@ class ClientGame extends React.Component {
 			const prevCellInfo = prevTurn.cellInfo;
 
 			/* Copy cell info to new turn as an array of new objects */
-			for(const i in prevCellInfo.data)
-				Object.assign(newCellInfo.data.get(i), prevCellInfo.data[i]);
+			for(const i in prevCellInfo.data.arr)
+				Object.assign(newCellInfo.data.get(i), prevCellInfo.data.get(i));
 
 			/* Copy the requested clears for this turn to last turn's data. */
 			for(const coords of clearReq)
@@ -155,7 +160,7 @@ class ClientGame extends React.Component {
 		}
 
 		/* Update w/ new information for this turn */
-		for({coords, surrounding, state} of clearActual) {
+		for(const {coords, surrounding, state} of clearActual) {
 			Object.assign(newCellInfo.get(...coords), {
 				cellState : state,
 				surrCount : surrounding
@@ -174,15 +179,7 @@ class ClientGame extends React.Component {
 		this.setState(({gameTurns}) => {
 			gameTurns[turnNum] = newTurn;
 			return {gameTurns};
-		})
-
-		/* Wait for initial latestTurn value from server before attempting to
-		update it */
-		if(this.state.latestTurn !== undefined) {
-			this.setState(prevState => (
-				{ latestTurn : Math.max(prevState.latestTurn, turnNum) }
-			));
-		}
+		});
 	}
 
 	componentWillUnmount() {
@@ -219,22 +216,25 @@ class ClientGame extends React.Component {
 	}
 
 	cellEventFn(x, y) {
-		{ currentTurn, gameTurns } = this.state;
+		const { currentTurn, gameTurns } = this.state;
 
 		return (ev) => ({
 			"onClick" : this.cellClicked,
 			"onMouseEnter" : this.cellHoveredOn,
 			"onMouseLeave" : this.cellHoveredOff,
 			"onContextMenu" : this.cellRightClicked
-		}[ev](x, y, gameTurns[currentTurn].get(x, y)));
+		// }[ev](x, y, gameTurns[currentTurn].get(x, y)));
+		}[ev](x, y));
 	}
 
-	cellClicked(x, y, {cellState}) {
+	cellClicked(x, y) {
+		const { cellState } = cellInfo(x, y);
+
 		if(cellState === "unknown") {}
 
 		if(cellState === "cleared") {
-			for c of surroundingCells.get(cellInfo) {
-				if c.cellState === "unknown"{}
+			for(let c of surroundingCells.get(cellInfo)) {
+				if(c.cellState === "unknown"){}
 			}
 		}
 	}
@@ -246,37 +246,53 @@ class ClientGame extends React.Component {
 	cellRightClicked(cellInfo) {}
 
 	render() {
-		const { turns, debugInfo, gameTurns, currentTurn, statusMsg } = this.state;
+		const {
+			turns,
+			debugInfo,
+			gameTurns,
+			currentTurn,
+			statusMsg
+		} = this.state;
+
+		const turnInfo = gameTurns[currentTurn];
 
 		return (
-			<GameGrid
-				dims={this.props.dims}
-				turnInfo={gameTurns[currentTurn]}
-				cellEventFn=cellEventFn
-			/>
-			// <TurnList {...{ currentTurn, turns }} />
-			// <DebugArea {...{ debugInfo }} />
-			// <br />
-			// <StatusInfo msg={statusMsg} />
+			<div>
+				{turnInfo && <GameGrid
+					dims={this.props.dims}
+					turnInfo={turnInfo}
+					cellEventFn={(x, y) => this.cellEventFn(x, y)}
+				/>}
+			</div>
+				// <TurnList {...{ currentTurn, turns }} />
+				// <DebugArea {...{ debugInfo }} />
+				// <br />
+				// <StatusInfo msg={statusMsg} />
 		);
 	}
 }
 
 class GameGrid extends React.Component {
 	render() {
+		console.log(this.props);
 		const [x_r, y_r] = this.props.dims;
-		const cellInfo = this.props.turnInfo.get(x, y);
+		const cellInfo = {
+			cellState : "unknown",
+			surrCount : undefined,
+			flagged : false
+		};
+		// const cellInfo = this.props.turnInfo.get(x, y);
 		return (
 			<div onContextMenu={e => e.preventDefault()}>
-				<table>{_.range(y_r).map(y =>
-					<tr key={y.toString()}>{_.range(x_r).map(x => {
+				<table><tbody>{_.range(y_r).map(y =>
+					<tr key={y.toString()}>{_.range(x_r).map(x => (
 						<GameCell
 							key={x.toString()}
-							{{ ...cellInfo }}
+							{ ...cellInfo }
 							onEvent={this.props.cellEventFn(x, y)}
 						/>
-					})}</tr>
-				)}</table>
+					))}</tr>
+				)}</tbody></table>
 			</div>
 		);
 	}
@@ -284,7 +300,7 @@ class GameGrid extends React.Component {
 
 class GameCell extends React.Component {
 	render() {
-		const className = "cell laminate " + ({
+		let className = "cell laminate " + ({
 			flagged : 'cellFlagged',
 			mine  : 'cellMine',
 			unknown : 'cellUnknown',
@@ -294,18 +310,18 @@ class GameCell extends React.Component {
 		if(this.props.hover && this.props.cellState === "unknown")
 			className += " cellHover";
 
-		const text = undefined;
+		let text;
 
 		if(this.props.cellState === "cleared" && this.props.surrCount > 0)
 			text = this.props.surrCount;
 
-		const evts = {};
+		let evts = {};
 
-		for (e of [ "onClick", "onContextMenu", "onMouseEnter", "onMouseLeave" ]) {
+		for (const e of [ "onClick", "onContextMenu", "onMouseEnter", "onMouseLeave" ]) {
 			evts[e] = () => this.props.onEvent(e);
 		}
 
-		return <td {{ className } { ...evts }}>{text}</td>;
+		return <td {...{ className }} {...evts}>{text}</td>;
 	}
 
 	get surroundingCells() {
@@ -372,3 +388,8 @@ class GameCell extends React.Component {
 			addSet.add(this);
 	}
 }
+
+ReactDOM.render(
+	<ClientGame dims={[10,10]} id="gigabeef" pass="b33f" />,
+	document.getElementById("gameArea")
+);

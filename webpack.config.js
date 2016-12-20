@@ -1,7 +1,7 @@
 module.exports = {
 	entry: [
 		'babel-polyfill',
-		'./src/public-src/client.js'
+		'./src/public-src/game-grid.js'
 	],
 	output: {
 		path: 'dist',
