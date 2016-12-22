@@ -6,11 +6,11 @@ input[type=number] {
 	width: 7ch;
 }
 
-#gameArea {
+.gameArea {
 	display: flex;
 }
 
-#debugArea {
+.debugArea {
 	padding: 10px;
 	display: flex;
 }
@@ -54,20 +54,24 @@ pre {
 	white-space: pre-wrap;
 }
 
-#gameList {
+.gameList {
 	height: 240px;
 	width: 500px;
 	overflow:auto;
 }
 
-#gameList li, #turnList li {
+.gameList li, .turnList li {
 	font-family: monospace;
 }
 
-#gameList li span, #turnList li span {
+.gameList li span, .turnList li span {
 	font-family: inherit;
 	display: inline-block;
 	margin-right: 5px;
+}
+
+.turnListSelected {
+	background-color: #dddddd;
 }
 
 .fa {

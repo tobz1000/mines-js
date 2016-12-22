@@ -66,7 +66,8 @@ class CellInfoArray {
 			this.arr[key] = {
 				cellState : "unknown",
 				surrCount : undefined,
-				flagged : false
+				flagged : false,
+				toClear : false
 			};
 		}
 
@@ -95,9 +96,8 @@ class ClientGame extends React.Component {
 
 		// this._surroundingCells = new Map;
 
-		/* TODO: which of these shouldn't be in "state" (if any)? */
 		this.state = {
-			gameTurns : {},
+			gameTurns : [],
 			hoverInfo : ndArray([], this.props.dims),
 			currentTurn : -1,
 			gameOver : false,
@@ -276,6 +276,10 @@ class ClientGame extends React.Component {
 		this.performSelfOrSurrounding(x, y, queueFlag);
 	}
 
+	turnListClicked(turnNum) {
+		this.setState({ currentTurn: turnNum });
+	}
+
 	render() {
 		const {
 			turns,
@@ -288,17 +292,21 @@ class ClientGame extends React.Component {
 		const turnInfo = gameTurns[currentTurn];
 
 		return (
-			<div>
+			<div className="gameArea">
 				{turnInfo && <GameGrid
 					dims={this.props.dims}
 					turnInfo={turnInfo}
 					cellEventFn={(x, y) => this.cellEventFn(x, y)}
 				/>}
+				<TurnList
+					currentTurn={currentTurn}
+					gameTurns={gameTurns}
+					clickFn={this.turnListClicked}
+				/>
+				<DebugArea {...{ debugInfo }} />
 			</div>
-				// <TurnList {...{ currentTurn, turns }} />
-				// <DebugArea {...{ debugInfo }} />
-				// <br />
-				// <StatusInfo msg={statusMsg} />
+			// <br />
+			// <StatusInfo msg={statusMsg} />
 		);
 	}
 }
@@ -308,7 +316,7 @@ class GameGrid extends React.Component {
 	render() {
 		const [x_r, y_r] = this.props.dims;
 		const cellInfo = (x, y) => this.props.turnInfo.cellInfo.get(x, y);
-		// const cellInfo = this.props.turnInfo.get(x, y);
+
 		return (
 			<div onContextMenu={e => e.preventDefault()}>
 				<table><tbody>{_.range(y_r).map(y =>
@@ -337,6 +345,9 @@ class GameCell extends React.Component {
 		if(this.props.hover && this.props.cellState === "unknown")
 			className += " cellHover";
 
+		if(this.props.toClear && this.props.cellState === "unknown")
+			className += " cellToClear";
+
 		let text;
 
 		if(this.props.cellState === "cleared" && this.props.surrCount > 0)
@@ -355,41 +366,37 @@ class GameCell extends React.Component {
 
 		return <td {...{ className }} {...evts}>{text}</td>;
 	}
+}
 
-	hover(hoverOn) {
-		if(this.props.cellState === "unknown")
-			this.setState({ hover : hoverOn });
-	}
+class TurnList extends React.Component {
+	render() {
+		return (
+			<ol className="turnList laminate">{
+				this.props.gameTurns.map((turn, i) => {
+					const props = {
+						key: i,
+						value: i,
+						onClick: () =>this.props.clickFn(i)
+					};
 
-	hoverSurrounding(hoverOn) {
-		for(const cell of this.surroundingCells)
-			cell.hover(hoverOn);
-	}
+					if(i === this.props.currentTurn)
+						props.className = "turnListSelected";
 
-	clearSurrounding() {
-		this.hoverSurrounding(false);
-
-		this.props.game.clearCells(
-			this.surroundingCells.filter(c => c.state.stateName === "unknown")
+					return <li {...props}>Turn</li>;
+				})
+			}</ol>
 		);
 	}
+}
 
-	get debug() {
-		const {coords, game:{debugInfo}} = this.props;
-		return debugInfo[this.currentTurn].cellInfo[coords.toString()];
-	}
-
-	toggleFlag(flagUp) {
-		const {toFlag, toUnflag} = this.props.game;
-		const [addSet, removeSet, newState] = flagUp ?
-			[toFlag, toUnflag, "flagged"] : [toUnflag, toFlag, "unknown"];
-
-		this.setState({ cellState: newState });
-
-		/* Only add to set if not currently in the other set (i.e. flag then
-		unflag == no action) */
-		if(!removeSet.delete(this))
-			addSet.add(this);
+class DebugArea extends React.Component {
+	render() {
+		return (
+			<div className="debugArea">
+				<div className="debugAreaTurn" />
+				<div className="debugAreaCell" />
+			</div>
+		);
 	}
 }
 
