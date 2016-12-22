@@ -8,6 +8,7 @@
     "2d-array": "^1.0.0",
     "ajv": "^4.1.7",
     "assert-type": "^0.1.0",
+    "autobind-decorator": "^1.3.4",
     "babel-cli": "^6.11.4",
     "babel-core": "^6.17.0",
     "babel-loader": "^6.2.5",
@@ -37,7 +38,8 @@
     "style-loader": "^0.13.1",
     "underscore": "^1.8.3"
   },
-  "devDependencies": {},
+  "devDependencies": {
+  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "babel-node src/server.js",
@@ -48,8 +50,7 @@
   "babel": {
     "plugins": [
       "syntax-async-functions",
-      "transform-regenerator",
-      "transform-class-properties"
+      "transform-regenerator"
     ],
     "presets": [
       "react"

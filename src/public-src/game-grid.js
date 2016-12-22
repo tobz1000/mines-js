@@ -3,6 +3,7 @@ import ReactDOM from "react-dom";
 import ndArray from "ndarray";
 import $ from "jquery";
 import _ from "underscore";
+import autobind from 'autobind-decorator';
 
 /* Send a request to the server; optionally perform an action based on the
 response. */
@@ -94,10 +95,10 @@ class ClientGame extends React.Component {
 
 		// this._surroundingCells = new Map;
 
-		/* TODO: which mof these shouldn't be in "state" (if any)? */
+		/* TODO: which of these shouldn't be in "state" (if any)? */
 		this.state = {
 			gameTurns : {},
-			// hoverInfo : ndArray([], this.props.dims),
+			hoverInfo : ndArray([], this.props.dims),
 			currentTurn : -1,
 			gameOver : false,
 			toFlag : new Set(),
@@ -117,11 +118,7 @@ class ClientGame extends React.Component {
 
 	performTurn() {
 		const { id, pass } = this.props;
-		const { toFlag, toUnflag, toClear : clear} = this.state;
-
-		const turnParams = { id, pass };
-
-
+		const { toFlag : flag, toUnflag : unflag, toClear : clear} = this.state;
 
 		if(!flag.size && !unflag.size && !clear.size)
 			return;
@@ -183,16 +180,15 @@ class ClientGame extends React.Component {
 	}
 
 	componentWillUnmount() {
-		this.serverWatcher.close();
+		// this.serverWatcher.close();
 	}
 
 	cellInfo(x, y) {
-		return this.state.gameTurns[this.state.currentTurn].get(x, y);
+		return this.state.gameTurns[this.state.currentTurn].cellInfo.get(x, y);
 	}
 
 	surroundingCells(x, y) {
 		const [dim_x, dim_y] = this.props.dims;
-		// if(!this._surroundingCells.has(cellInfo)) {
 		const surr = [];
 
 		for (let i of [-1, 0, 1]) {
@@ -208,14 +204,9 @@ class ClientGame extends React.Component {
 		}
 
 		return surr;
-
-		// 	this._surroundingCells.set(cellInfo, surr);
-		// }
-
-		// return this._surroundingCells.get(cellInfo);
 	}
 
-	cellEventFn(x, y) {
+	cellEventFn (x, y) {
 		const { currentTurn, gameTurns } = this.state;
 
 		return (ev) => ({
@@ -223,27 +214,67 @@ class ClientGame extends React.Component {
 			"onMouseEnter" : this.cellHoveredOn,
 			"onMouseLeave" : this.cellHoveredOff,
 			"onContextMenu" : this.cellRightClicked
-		// }[ev](x, y, gameTurns[currentTurn].get(x, y)));
 		}[ev](x, y));
 	}
 
-	cellClicked(x, y) {
-		const { cellState } = cellInfo(x, y);
-
-		if(cellState === "unknown") {}
-
-		if(cellState === "cleared") {
-			for(let c of surroundingCells.get(cellInfo)) {
-				if(c.cellState === "unknown"){}
+	performSelfOrSurrounding(x, y, fn) {
+		if(this.cellInfo(x, y).cellState === "cleared") {
+			for(let [_x, _y] of this.surroundingCells(x, y)) {
+				fn(_x, _y);
 			}
 		}
+		else
+			fn(x, y);
 	}
 
-	cellHoveredOn(cellInfo) {}
+	cellClicked(x, y) {
+		const queueClear = (_x, _y) => {
+			const { cellState, flagged } = this.cellInfo(_x, _y);
 
-	cellHoveredOff(cellInfo) {}
+			if(cellState === "unknown" && !flagged)
+				this.state.toClear.add([_x, _y]);
+		};
 
-	cellRightClicked(cellInfo) {}
+		this.performSelfOrSurrounding(x, y, queueClear);
+		this.performTurn();
+	}
+
+	cellHovered(x, y, hoverOn) {
+		this.performSelfOrSurrounding(x, y, (_x, _y) => {
+			this.setState(state =>{
+				const { gameTurns, currentTurn } = state;
+				gameTurns[currentTurn].cellInfo.get(_x, _y).hover = hoverOn;
+				return { gameTurns };
+			})
+		});
+	}
+
+	cellHoveredOn(x, y) {
+		this.cellHovered(x, y, true);
+	}
+
+	cellHoveredOff(x, y) {
+		this.cellHovered(x, y, false);
+	}
+
+	cellRightClicked(cellInfo) {
+		const queueFlag = (_x, _y) => {
+			const { cellState, flagged } = this.cellInfo(_x, _y);
+			const [addSet, removeSet] = flagged ?
+				[this.state.toUnflag, this.state.toFlag] :
+				[this.state.toFlag, this.state.toUnflag];
+
+			if(cellState !== "unknown")
+				return;
+
+			/* Only add to set if not currently in the other set (i.e. flag then
+			unflag == no action) */
+			if(!removeSet.delete(this))
+				addSet.add(this);
+		};
+
+		this.performSelfOrSurrounding(x, y, queueFlag);
+	}
 
 	render() {
 		const {
@@ -271,16 +302,12 @@ class ClientGame extends React.Component {
 		);
 	}
 }
+ClientGame = autobind(ClientGame);
 
 class GameGrid extends React.Component {
 	render() {
-		console.log(this.props);
 		const [x_r, y_r] = this.props.dims;
-		const cellInfo = {
-			cellState : "unknown",
-			surrCount : undefined,
-			flagged : false
-		};
+		const cellInfo = (x, y) => this.props.turnInfo.cellInfo.get(x, y);
 		// const cellInfo = this.props.turnInfo.get(x, y);
 		return (
 			<div onContextMenu={e => e.preventDefault()}>
@@ -288,7 +315,7 @@ class GameGrid extends React.Component {
 					<tr key={y.toString()}>{_.range(x_r).map(x => (
 						<GameCell
 							key={x.toString()}
-							{ ...cellInfo }
+							{ ...cellInfo(x, y) }
 							onEvent={this.props.cellEventFn(x, y)}
 						/>
 					))}</tr>
@@ -317,39 +344,16 @@ class GameCell extends React.Component {
 
 		let evts = {};
 
-		for (const e of [ "onClick", "onContextMenu", "onMouseEnter", "onMouseLeave" ]) {
+		for (const e of [
+			"onClick",
+			"onContextMenu",
+			"onMouseEnter",
+			"onMouseLeave"
+		]) {
 			evts[e] = () => this.props.onEvent(e);
 		}
 
 		return <td {...{ className }} {...evts}>{text}</td>;
-	}
-
-	get surroundingCells() {
-		const {coords, game} = this.props;
-		if(!this._surroundingCells) {
-			this._surroundingCells = [];
-
-			for (let i of [-1, 0, 1]) {
-				for (let j of [-1, 0, 1]) {
-					if(i === 0 && j === 0)
-						continue;
-
-					const x = coords[0] + i, y = coords[1] + j;
-
-					if(
-						x < 0 ||
-						y < 0 ||
-						x > game.dims[0] - 1 ||
-						y > game.dims[1] - 1
-					)
-						continue;
-
-					this._surroundingCells.push(game.getCell([x, y]));
-				}
-			}
-		}
-
-		return this._surroundingCells;
 	}
 
 	hover(hoverOn) {
