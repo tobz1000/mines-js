@@ -137,7 +137,14 @@ class ClientGame extends React.Component {
 		cellsRem
 	}) {
 		const newCellInfo = new ndArray(new CellInfoArray, this.props.dims);
-		const newTurn = { gameOver, win, cellsRem, cellInfo : newCellInfo };
+		const newTurn = {
+			gameOver,
+			win,
+			cellsRem,
+			clearActual,
+			clearReq,
+			cellInfo : newCellInfo,
+		};
 
 		if(turnNum > 0) {
 			const prevTurn = this.state.gameTurns[turnNum - 1];
@@ -302,6 +309,7 @@ class ClientGame extends React.Component {
 					currentTurn={currentTurn}
 					gameTurns={gameTurns}
 					clickFn={this.turnListClicked}
+					initialCellsRem={gameTurns[0] && gameTurns[0].cellsRem}
 				/>
 				<DebugArea {...{ debugInfo }} />
 			</div>
@@ -374,17 +382,44 @@ class TurnList extends React.Component {
 			<ol className="turnList laminate">{
 				this.props.gameTurns.map((turn, i) => {
 					const props = {
-						key: i,
-						value: i,
-						onClick: () =>this.props.clickFn(i)
+						turnNum: i,
+						info: turn,
+						selected: i === this.props.currentTurn,
+						initialCellsRem: this.props.initialCellsRem,
+						onClick: () => this.props.clickFn(i)
 					};
 
-					if(i === this.props.currentTurn)
-						props.className = "turnListSelected";
-
-					return <li {...props}>Turn</li>;
+					return <TurnListEntry key={i} {...props} />;
 				})
 			}</ol>
+		);
+	}
+}
+
+class TurnListEntry extends React.Component {
+	render() {
+		const {clearActual, clearReq, gameOver, win, cellsRem } = this.props.info;
+
+		const infoItems = [
+			{ type: "clearReq", text: clearReq.length },
+			{ type: "clearActual", text: clearActual.length }
+		];
+
+		if(gameOver)
+			infoItems.push({ type: win ? "win" : "lose" });
+		else if(this.props.initialCellsRem !== undefined) {
+			const percComp = 100 * (1 - cellsRem / this.props.initialCellsRem);
+			infoItems.push({ type: "percComplete", text: `${percComp.toFixed()}%`})
+		}
+
+		return (
+			<li
+				value={this.props.turnNum}
+				className={this.props.selected ? "turnListSelected" : undefined}
+				onClick={this.props.onClick}
+			>{
+				infoItems.map((props, i) => <ListItemProp key={i} {...props} />)
+			}</li>
 		);
 	}
 }
@@ -397,6 +432,56 @@ class DebugArea extends React.Component {
 				<div className="debugAreaCell" />
 			</div>
 		);
+	}
+}
+
+class ListItemProp extends React.Component {
+	render() {
+		const { icon, minChars } = {
+			id : {
+				icon : "fa-hashtag",
+				minChars : 24,
+			},
+			dims : {
+				icon : "fa-th",
+				minChars : 5,
+			},
+			mines : {
+				icon : "fa-bomb",
+				minChars : 2,
+			},
+			playable : {
+				icon : "fa-gamepad"
+			},
+			watchable : {
+				icon : "fa-binoculars"
+			},
+			clearReq : {
+				icon : "fa-paint-brush",
+				minChars : 2,
+			},
+			clearActual : {
+				icon : "fa-long-arrow-right",
+				minChars : 2,
+			},
+			percComplete : {
+				minChars : 3,
+			},
+			win : {
+				icon : "fa-trophy"
+			},
+			lose : {
+				icon : "fa-bomb"
+			}
+		}[this.props.type];
+
+		const minWidth = (minChars || 0) + (icon ? 2 : 0);
+		return (
+			<span style={{ minWidth: `${minWidth}ch` }}>{[
+				icon && <i key="i" className={`fa ${icon}`} />,
+				this.props.text
+			]}</span>
+		)
 	}
 }
 
