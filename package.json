@@ -28,6 +28,7 @@
     "json-over-tcp": "^0.3.2",
     "json-socket": "^0.1.2",
     "jsonsocket": "^1.0.2",
+    "keymaster": "^1.6.2",
     "lodash": "^4.6.1",
     "mongoose": "^4.5.5",
     "ndarray": "^1.0.18",
@@ -39,6 +40,7 @@
     "underscore": "^1.8.3"
   },
   "devDependencies": {
+    "react-addons-perf": "^15.4.1"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",

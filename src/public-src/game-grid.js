@@ -1,9 +1,12 @@
 import React from "react";
 import ReactDOM from "react-dom";
+import keymaster from "keymaster";
 import ndArray from "ndarray";
 import $ from "jquery";
 import _ from "underscore";
 import autobind from 'autobind-decorator';
+
+const CELL_HOVER = false;
 
 /* Send a request to the server; optionally perform an action based on the
 response. */
@@ -107,6 +110,9 @@ class ClientGame extends React.Component {
 			statusMsg : undefined
 		};
 
+		keymaster("up", this.viewPrevTurn);
+		keymaster("down", this.viewNextTurn);
+
 		$.getJSON("sample-turns.json").then(data => {
 			_.each(data, t => this.updateTurnInfo(t));
 		});
@@ -186,8 +192,24 @@ class ClientGame extends React.Component {
 		});
 	}
 
+	viewPrevTurn() {
+		console.log(this.state.currentTurn);
+		if(this.state.currentTurn > 0) {
+			this.setState(({ currentTurn }) => ({ currentTurn : currentTurn - 1}));
+		}
+	}
+
+	viewNextTurn() {
+		console.log(this.state.currentTurn);
+		if (this.state.currentTurn < this.state.gameTurns.length - 1) {
+			this.setState(({ currentTurn }) => ({ currentTurn : currentTurn + 1}));
+		}
+	}
+
 	componentWillUnmount() {
 		// this.serverWatcher.close();
+		keymaster.unbind("up", this.viewPrevTurn);
+		keymaster.unbind("down", this.viewNextTurn);
 	}
 
 	cellInfo(x, y) {
@@ -357,22 +379,18 @@ class GameCell extends React.Component {
 			className += " cellToClear";
 
 		let text;
-
 		if(this.props.cellState === "cleared" && this.props.surrCount > 0)
 			text = this.props.surrCount;
 
-		let evts = {};
+		let event_names = [ "onClick", "onContextMenu", ];
+		CELL_HOVER && event_names.push("onMouseEnter", "onMouseLeave");
 
-		for (const e of [
-			"onClick",
-			"onContextMenu",
-			"onMouseEnter",
-			"onMouseLeave"
-		]) {
-			evts[e] = () => this.props.onEvent(e);
+		let events = {};
+		for (const e of event_names) {
+			events[e] = () => this.props.onEvent(e);
 		}
 
-		return <td {...{ className }} {...evts}>{text}</td>;
+		return <td {...{ className }} {...events}>{text}</td>;
 	}
 }
 
