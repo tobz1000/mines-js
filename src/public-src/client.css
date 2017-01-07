@@ -8,6 +8,7 @@ input[type=number] {
 
 .gameArea {
 	display: flex;
+	flex-wrap: wrap;
 }
 
 .debugArea {
@@ -70,7 +71,7 @@ pre {
 	margin-right: 5px;
 }
 
-.turnListSelected {
+.listSelected {
 	background-color: #dddddd;
 }
 

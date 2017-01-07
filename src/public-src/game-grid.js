@@ -120,6 +120,8 @@ class ClientGame extends React.Component {
 		$.getJSON("sample-status.json").then(({turnNum}) => {
 			this.setState({ currentTurn : turnNum });
 		});
+
+		this.refreshGameList();
 	}
 
 	performTurn() {
@@ -204,6 +206,10 @@ class ClientGame extends React.Component {
 		if (this.state.currentTurn < this.state.gameTurns.length - 1) {
 			this.setState(({ currentTurn }) => ({ currentTurn : currentTurn + 1}));
 		}
+	}
+
+	async refreshGameList() {
+		this.setState({ games : await $.getJSON("server/games") });
 	}
 
 	componentWillUnmount() {
@@ -315,7 +321,8 @@ class ClientGame extends React.Component {
 			debugInfo,
 			gameTurns,
 			currentTurn,
-			statusMsg
+			statusMsg,
+			games
 		} = this.state;
 
 		const turnInfo = gameTurns[currentTurn];
@@ -334,6 +341,9 @@ class ClientGame extends React.Component {
 					initialCellsRem={gameTurns[0] && gameTurns[0].cellsRem}
 				/>
 				<DebugArea {...{ debugInfo }} />
+				<br />
+				<br />
+				{games && <GameList games={games} />}
 			</div>
 			// <br />
 			// <StatusInfo msg={statusMsg} />
@@ -433,7 +443,7 @@ class TurnListEntry extends React.Component {
 		return (
 			<li
 				value={this.props.turnNum}
-				className={this.props.selected ? "turnListSelected" : undefined}
+				className={this.props.selected ? "listSelected" : undefined}
 				onClick={this.props.onClick}
 			>{
 				infoItems.map((props, i) => <ListItemProp key={i} {...props} />)
@@ -449,6 +459,45 @@ class DebugArea extends React.Component {
 				<div className="debugAreaTurn" />
 				<div className="debugAreaCell" />
 			</div>
+		);
+	}
+}
+
+class GameList extends React.Component {
+	render() {
+		return (
+			<div className="gameList"><ul>{
+				this.props.games.map((game, i) => {
+					const props = {
+						info: game,
+						selected: game === this.props.currentGame,
+						onClick: () => this.props.clickFn(i)
+					};
+
+					return <GameListEntry key={i} {...props} />;
+				})
+			}</ul></div>
+		)
+	}
+}
+
+class GameListEntry extends React.Component {
+	render() {
+		const { mines, clients, dims, id } = this.props.info;
+
+		const infoItems = [
+			{ type: "id", text: id },
+			{ type: "dims", text: dims },
+			{ type: "mines", text: mines },
+		];
+
+		return (
+			<li
+				className={this.props.selected ? "listSelected" : undefined}
+				onClick={this.props.onClick}
+			>{
+				infoItems.map((props, i) => <ListItemProp key={i} {...props} />)
+			}</li>
 		);
 	}
 }
