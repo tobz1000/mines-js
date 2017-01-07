@@ -341,8 +341,6 @@ class ClientGame extends React.Component {
 					initialCellsRem={gameTurns[0] && gameTurns[0].cellsRem}
 				/>
 				<DebugArea {...{ debugInfo }} />
-				<br />
-				<br />
 				{games && <GameList games={games} />}
 			</div>
 			// <br />
@@ -487,7 +485,7 @@ class GameListEntry extends React.Component {
 
 		const infoItems = [
 			{ type: "id", text: id },
-			{ type: "dims", text: dims },
+			{ type: "dims", text: `${dims[0]}x${dims[1]}` },
 			{ type: "mines", text: mines },
 		];
 
