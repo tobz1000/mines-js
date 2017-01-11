@@ -29,7 +29,7 @@ const serverAction = async (action, req) => {
 
 /*
 
-ClientGame.state =
+GameViewer.state =
 {
 	gameTurns : {
 		turnNum : {
@@ -82,7 +82,7 @@ class CellInfoArray {
 	}
 }
 
-class ClientGame extends React.Component {
+class GameViewer extends React.Component {
 	constructor(props) {
 		super(props);
 
@@ -348,7 +348,7 @@ class ClientGame extends React.Component {
 		);
 	}
 }
-ClientGame = autobind(ClientGame);
+GameViewer = autobind(GameViewer);
 
 class GameGrid extends React.Component {
 	render() {
@@ -551,6 +551,6 @@ class ListItemProp extends React.Component {
 }
 
 ReactDOM.render(
-	<ClientGame dims={[10,10]} id="gigabeef" pass="b33f" />,
+	<GameViewer dims={[10,10]} id="gigabeef" pass="b33f" />,
 	document.getElementById("gameArea")
 );
