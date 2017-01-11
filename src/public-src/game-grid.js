@@ -83,25 +83,58 @@ class CellInfoArray {
 }
 
 class GameViewer extends React.Component {
+	constructor() {
+		super();
+
+		this.state = {
+			gameId : undefined,
+			games : []
+		};
+
+		// $.getJSON("sample-turns.json").then(data => {
+		// 	_.each(data, t => this.updateTurnInfo(t));
+		// });
+
+		// $.getJSON("sample-status.json").then(({turnNum}) => {
+		// 	this.setState({ currentTurn : turnNum });
+		// });
+
+		this.refreshGameList();
+	}
+
+	async refreshGameList() {
+		this.setState({ games : await serverAction("games") });
+	}
+
+	gameEntryClicked(id) {
+		this.setState({ gameId : id });
+	}
+
+	render() {
+		const { gameId, games } = this.state;
+
+		return (
+			<div className="gameArea">
+				{gameId && <ClientGame key={gameId} id={gameId} />}
+				{games && <GameList
+					games={games}
+					clickFn={this.gameEntryClicked}
+					currentId={gameId}
+				/>}
+			</div>
+			// <br />
+			// <StatusInfo msg={statusMsg} />
+		);
+	}
+}
+GameViewer = autobind(GameViewer);
+
+class ClientGame extends React.Component {
 	constructor(props) {
 		super(props);
 
-		if(props.dims.length !== 2)
-			throw new Error("Only 2d games supported");
-
-		// this.serverWatcher = new EventSource(`server/watch?id=${id}&from=0`);
-		// this.serverWatcher.addEventListener("message", ({data}) => {
-		// 	this.updateTurnInfo(JSON.parse(data));
-		// });
-		// showDebug && this.serverWatcher.addEventListener("debug", ({data}) => {
-		// 	this.updateDebug(JSON.parse(data));
-		// });
-
-		// this._surroundingCells = new Map;
-
 		this.state = {
 			gameTurns : [],
-			hoverInfo : ndArray([], this.props.dims),
 			currentTurn : -1,
 			gameOver : false,
 			toFlag : new Set(),
@@ -113,117 +146,35 @@ class GameViewer extends React.Component {
 		keymaster("up", this.viewPrevTurn);
 		keymaster("down", this.viewNextTurn);
 
-		$.getJSON("sample-turns.json").then(data => {
-			_.each(data, t => this.updateTurnInfo(t));
-		});
+		this.serverWatcher = new EventSource(
+			`server/watch?id=${props.id}&from=0`
+		);
 
-		$.getJSON("sample-status.json").then(({turnNum}) => {
+		serverAction("status", { id : props.id }).then(({turnNum}) => {
 			this.setState({ currentTurn : turnNum });
 		});
 
-		this.refreshGameList();
-	}
+		this.serverWatcher.addEventListener("message", ({data}) => {
+			this.updateTurnInfo(JSON.parse(data));
+		});
 
-	performTurn() {
-		const { id, pass } = this.props;
-		const { toFlag : flag, toUnflag : unflag, toClear : clear} = this.state;
-
-		if(!flag.size && !unflag.size && !clear.size)
-			return;
-
-		serverAction("turn", { id, pass, clear, flag, unflag });
-	}
-
-	updateTurnInfo({
-		turnNum,
-		clearReq,
-		clearActual,
-		flagged,
-		unflagged,
-		gameOver,
-		win,
-		cellsRem
-	}) {
-		const newCellInfo = new ndArray(new CellInfoArray, this.props.dims);
-		const newTurn = {
-			gameOver,
-			win,
-			cellsRem,
-			clearActual,
-			clearReq,
-			cellInfo : newCellInfo,
-		};
-
-		if(turnNum > 0) {
-			const prevTurn = this.state.gameTurns[turnNum - 1];
-
-			if(!prevTurn)
-				throw Error(`Missing turn number ${turnNum - 1}`);
-
-			const prevCellInfo = prevTurn.cellInfo;
-
-			/* Copy cell info to new turn as an array of new objects */
-			for(const i in prevCellInfo.data.arr)
-				Object.assign(newCellInfo.data.get(i), prevCellInfo.data.get(i));
-
-			/* Copy the requested clears for this turn to last turn's data. */
-			for(const coords of clearReq)
-				prevCellInfo.get(...coords).toClear = true;
-		}
-
-		/* Update w/ new information for this turn */
-		for(const {coords, surrounding, state} of clearActual) {
-			Object.assign(newCellInfo.get(...coords), {
-				cellState : state,
-				surrCount : surrounding
+		if(props.debug) {
+			this.serverWatcher.addEventListener("debug", ({data}) => {
+				this.updateDebug(JSON.parse(data));
 			});
 		}
-
-		/* Update flagged/unflagged info */
-		for(coords of flagged) {
-			newCellInfo.get(...coords).flagged = true;
-		}
-
-		for(coords of unflagged) {
-			newCellInfo.get(...coords).flagged = false;
-		}
-
-		this.setState(({gameTurns}) => {
-			gameTurns[turnNum] = newTurn;
-			return {gameTurns};
-		});
-	}
-
-	viewPrevTurn() {
-		console.log(this.state.currentTurn);
-		if(this.state.currentTurn > 0) {
-			this.setState(({ currentTurn }) => ({ currentTurn : currentTurn - 1}));
-		}
-	}
-
-	viewNextTurn() {
-		console.log(this.state.currentTurn);
-		if (this.state.currentTurn < this.state.gameTurns.length - 1) {
-			this.setState(({ currentTurn }) => ({ currentTurn : currentTurn + 1}));
-		}
-	}
-
-	async refreshGameList() {
-		this.setState({ games : await $.getJSON("server/games") });
-	}
-
-	componentWillUnmount() {
-		// this.serverWatcher.close();
-		keymaster.unbind("up", this.viewPrevTurn);
-		keymaster.unbind("down", this.viewNextTurn);
 	}
 
 	cellInfo(x, y) {
 		return this.state.gameTurns[this.state.currentTurn].cellInfo.get(x, y);
 	}
 
+	get dims() {
+		return this.state.gameTurns[this.state.currentTurn].dims;
+	}
+
 	surroundingCells(x, y) {
-		const [dim_x, dim_y] = this.props.dims;
+		const [dim_x, dim_y] = this.dims;
 		const surr = [];
 
 		for (let i of [-1, 0, 1]) {
@@ -311,8 +262,97 @@ class GameViewer extends React.Component {
 		this.performSelfOrSurrounding(x, y, queueFlag);
 	}
 
-	turnListClicked(turnNum) {
-		this.setState({ currentTurn: turnNum });
+	async performTurn() {
+		const { id, pass } = this.props;
+		const { toFlag : flag, toUnflag : unflag, toClear : clear} = this.state;
+
+		if(!flag.size && !unflag.size && !clear.size)
+			return;
+
+		const resp = await serverAction("turn", { id, pass, clear, flag, unflag });
+	}
+
+	updateTurnInfo({
+		dims,
+		turnNum,
+		clearReq,
+		clearActual,
+		flagged,
+		unflagged,
+		gameOver,
+		win,
+		cellsRem
+	}) {
+		const newCellInfo = new ndArray(new CellInfoArray, dims);
+		const newTurn = {
+			dims,
+			gameOver,
+			win,
+			cellsRem,
+			clearActual,
+			clearReq,
+			cellInfo : newCellInfo,
+		};
+
+		if(turnNum > 0) {
+			const prevTurn = this.state.gameTurns[turnNum - 1];
+
+			if(!prevTurn)
+				throw Error(`Missing turn number ${turnNum - 1}`);
+
+			const prevCellInfo = prevTurn.cellInfo;
+
+			/* Copy cell info to new turn as an array of new objects */
+			for(const i in prevCellInfo.data.arr)
+				Object.assign(newCellInfo.data.get(i), prevCellInfo.data.get(i));
+
+			/* Copy the requested clears for this turn to last turn's data. */
+			for(const coords of clearReq)
+				prevCellInfo.get(...coords).toClear = true;
+		}
+
+		/* Update w/ new information for this turn */
+		for(const {coords, surrounding, state} of clearActual) {
+			Object.assign(newCellInfo.get(...coords), {
+				cellState : state,
+				surrCount : surrounding
+			});
+		}
+
+		/* Update flagged/unflagged info */
+		for(const coords of flagged) {
+			newCellInfo.get(...coords).flagged = true;
+		}
+
+		for(const coords of unflagged) {
+			newCellInfo.get(...coords).flagged = false;
+		}
+
+		this.setState(({gameTurns}) => {
+			gameTurns[turnNum] = newTurn;
+			return {gameTurns};
+		});
+	}
+
+	viewPrevTurn() {
+		if(this.state.currentTurn > 0) {
+			this.setState(({currentTurn}) => ({ currentTurn : currentTurn - 1}));
+		}
+	}
+
+	viewNextTurn() {
+		if (this.state.currentTurn < this.state.gameTurns.length - 1) {
+			this.setState(({currentTurn}) => ({ currentTurn : currentTurn + 1}));
+		}
+	}
+
+	componentWillUnmount() {
+		this.serverWatcher.close();
+
+		/* TODO: seems to be race condition whereby binding for a new ClientGame
+		occurs before unbinding from the previous, causing unbinding to fail (?) */
+		keymaster.unbind("down", this.viewNextTurn);
+		keymaster.unbind("up", this.viewPrevTurn);
 	}
 
 	render() {
@@ -320,9 +360,7 @@ class GameViewer extends React.Component {
 			turns,
 			debugInfo,
 			gameTurns,
-			currentTurn,
-			statusMsg,
-			games
+			currentTurn
 		} = this.state;
 
 		const turnInfo = gameTurns[currentTurn];
@@ -330,29 +368,28 @@ class GameViewer extends React.Component {
 		return (
 			<div className="gameArea">
 				{turnInfo && <GameGrid
-					dims={this.props.dims}
 					turnInfo={turnInfo}
 					cellEventFn={(x, y) => this.cellEventFn(x, y)}
 				/>}
 				<TurnList
 					currentTurn={currentTurn}
 					gameTurns={gameTurns}
-					clickFn={this.turnListClicked}
+					clickFn={turnNum => this.setState({ currentTurn: turnNum })}
 					initialCellsRem={gameTurns[0] && gameTurns[0].cellsRem}
 				/>
 				<DebugArea {...{ debugInfo }} />
-				{games && <GameList games={games} />}
 			</div>
 			// <br />
 			// <StatusInfo msg={statusMsg} />
 		);
 	}
 }
-GameViewer = autobind(GameViewer);
+ClientGame = autobind(ClientGame);
 
 class GameGrid extends React.Component {
 	render() {
-		const [x_r, y_r] = this.props.dims;
+		// const [x_r, y_r] = [10, 10];
+		const [x_r, y_r] = this.props.turnInfo.dims;
 		const cellInfo = (x, y) => this.props.turnInfo.cellInfo.get(x, y);
 
 		return (
@@ -468,8 +505,8 @@ class GameList extends React.Component {
 				this.props.games.map((game, i) => {
 					const props = {
 						info: game,
-						selected: game === this.props.currentGame,
-						onClick: () => this.props.clickFn(i)
+						selected: game.id === this.props.currentId,
+						onClick: () => this.props.clickFn(game.id)
 					};
 
 					return <GameListEntry key={i} {...props} />;
@@ -551,6 +588,6 @@ class ListItemProp extends React.Component {
 }
 
 ReactDOM.render(
-	<GameViewer dims={[10,10]} id="gigabeef" pass="b33f" />,
+	<GameViewer />,
 	document.getElementById("gameArea")
 );
