@@ -91,14 +91,6 @@ class GameViewer extends React.Component {
 			games : []
 		};
 
-		// $.getJSON("sample-turns.json").then(data => {
-		// 	_.each(data, t => this.updateTurnInfo(t));
-		// });
-
-		// $.getJSON("sample-status.json").then(({turnNum}) => {
-		// 	this.setState({ currentTurn : turnNum });
-		// });
-
 		this.refreshGameList();
 	}
 
@@ -502,15 +494,14 @@ class GameList extends React.Component {
 	render() {
 		return (
 			<div className="gameList"><ul>{
-				this.props.games.map((game, i) => {
-					const props = {
-						info: game,
-						selected: game.id === this.props.currentId,
-						onClick: () => this.props.clickFn(game.id)
-					};
-
-					return <GameListEntry key={i} {...props} />;
-				})
+				this.props.games.map((game, i) =>
+					<GameListEntry
+						key={i}
+						info={game}
+						selected={game.id === this.props.currentId}
+						onClick={() => this.props.clickFn(game.id)}
+					/>
+				)
 			}</ul></div>
 		)
 	}
