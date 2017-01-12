@@ -18,10 +18,9 @@ const serverAction = async (action, req) => {
 
 	if(resp.error) {
 		let errMsg = `Server error: ${resp.error}`;
-		if(resp.info)
-			errMsg += `\nInfo: ${JSON.stringify(resp.info)}`;
-		showMsg(errMsg);
-		return;
+		if(resp.info !== undefined)
+			errMsg += `; info: ${resp.info}`;
+		throw new Error(errMsg);
 	}
 
 	return resp;
@@ -131,9 +130,10 @@ class ClientGame extends React.Component {
 			gameOver : false,
 			toFlag : new Set(),
 			toUnflag : new Set(),
-			toClear : new Set(),
 			statusMsg : undefined
 		};
+
+		this.toClear = new Set();
 
 		keymaster("up", this.viewPrevTurn);
 		keymaster("down", this.viewNextTurn);
@@ -210,7 +210,7 @@ class ClientGame extends React.Component {
 			const { cellState, flagged } = this.cellInfo(_x, _y);
 
 			if(cellState === "unknown" && !flagged)
-				this.state.toClear.add([_x, _y]);
+				this.toClear.add([_x, _y]);
 		};
 
 		this.performSelfOrSurrounding(x, y, queueClear);
@@ -256,12 +256,26 @@ class ClientGame extends React.Component {
 
 	async performTurn() {
 		const { id, pass } = this.props;
-		const { toFlag : flag, toUnflag : unflag, toClear : clear} = this.state;
 
 		if(!flag.size && !unflag.size && !clear.size)
 			return;
 
-		const resp = await serverAction("turn", { id, pass, clear, flag, unflag });
+		const resp = serverAction("turn", {
+			id,
+			pass,
+			clear : this.toClear,
+			flag : this.state.toFlag,
+			unflag : this.state.toUnflag
+		});
+
+		/* Always clear the toClear queue, whether serverAction succeeds or not;
+		 * since the user has no visual indicator of a queued clear. */
+		this.toClear.clear();
+
+		await resp;
+
+		/* On successful response, flush queued flags. */
+		this.setState({ toFlag : new Set(), toUnflag : new Set() });
 	}
 
 	updateTurnInfo({
