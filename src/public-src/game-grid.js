@@ -101,6 +101,10 @@ class GameViewer extends React.Component {
 		this.setState({ gameId : id });
 	}
 
+	newGame(mines, dims, pass) {
+		/* TODO */
+	}
+
 	render() {
 		const { gameId, games } = this.state;
 
@@ -112,9 +116,12 @@ class GameViewer extends React.Component {
 					clickFn={this.gameEntryClicked}
 					currentId={gameId}
 				/>}
+				<NewGameDialogue
+					submitFn={this.newGame}
+					defaults={{ mines : 10, dim0 : 10, dim1 : 10}}
+				/>
+			{/*<StatusInfo msg={statusMsg} />*/}
 			</div>
-			// <br />
-			// <StatusInfo msg={statusMsg} />
 		);
 	}
 }
@@ -257,20 +264,19 @@ class ClientGame extends React.Component {
 	async performTurn() {
 		const { id, pass } = this.props;
 
+		const { flag, unflag } = this.state;
+		const clear = this.toClear;
+
 		if(!flag.size && !unflag.size && !clear.size)
 			return;
 
-		const resp = serverAction("turn", {
-			id,
-			pass,
-			clear : this.toClear,
-			flag : this.state.toFlag,
-			unflag : this.state.toUnflag
-		});
+		const params = { id, pass, clear, flag, unflag, client : "human" };
+
+		const resp = serverAction("turn", params);
 
 		/* Always clear the toClear queue, whether serverAction succeeds or not;
-		 * since the user has no visual indicator of a queued clear. */
-		this.toClear.clear();
+		 * since the user has no visual indicator of a still-queued clear. */
+		this.toClear = new Set();
 
 		await resp;
 
@@ -591,6 +597,72 @@ class ListItemProp extends React.Component {
 		)
 	}
 }
+
+class NewGameDialogue extends React.Component {
+	constructor() {
+		super();
+
+		this.state = {};
+		this.submitFn = () =>{
+			const { mines, dim0, dim1 } = this.state;
+			this.props.submitFn(mines, [dim0, dim1], undefined);
+		};
+	}
+
+	textEntryFn(param, val) {
+		this.setState({ [param] : val });
+	}
+
+	render() {
+		return (
+			<div>
+				<NumberEntry
+					label="Mines: "
+					param="mines"
+					def={this.props.defaults.mines}
+					entryFn={this.textEntryFn}
+				/>
+				{' '}
+				<NumberEntry
+					label="Columns: "
+					param="dim0"
+					def={this.props.defaults.dim0}
+					entryFn={this.textEntryFn}
+				/>
+				{' '}
+				<NumberEntry
+					label="Rows: "
+					param="dim1"
+					def={this.props.defaults.dim1}
+					entryFn={this.textEntryFn}
+				/>
+				<br />
+				<button onClick={this.submitFn}>New Game</button>
+			</div>
+		)
+	}
+}
+NewGameDialogue = autobind(NewGameDialogue);
+
+class NumberEntry extends React.Component {
+	constructor() {
+		super();
+
+		this.entryFn = evt => {
+			this.props.entryFn(this.props.param, Number(evt.target.value));
+		};
+	}
+
+	render() {
+		const { label, param, def } = this.props;
+		const input = (
+			<input type="number" min="1" onChange={this.entryFn} value={def} />
+		);
+
+		return label && <label>{label}{input}</label> || input;
+	}
+}
+NumberEntry = autobind(NumberEntry);
 
 ReactDOM.render(
 	<GameViewer />,
