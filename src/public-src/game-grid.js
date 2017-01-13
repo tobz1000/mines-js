@@ -97,12 +97,15 @@ class GameViewer extends React.Component {
 		this.setState({ games : await serverAction("games") });
 	}
 
-	gameEntryClicked(id) {
+	selectGame(id) {
 		this.setState({ gameId : id });
 	}
 
-	newGame(mines, dims, pass) {
-		/* TODO */
+	async newGame(mines, dims, pass) {
+		const resp = await serverAction("new", {mines, dims, pass});
+		console.log(resp);
+		this.refreshGameList();
+		this.selectGame(resp.id);
 	}
 
 	render() {
@@ -111,15 +114,19 @@ class GameViewer extends React.Component {
 		return (
 			<div className="gameArea">
 				{gameId && <ClientGame key={gameId} id={gameId} />}
-				{games && <GameList
-					games={games}
-					clickFn={this.gameEntryClicked}
-					currentId={gameId}
-				/>}
-				<NewGameDialogue
-					submitFn={this.newGame}
-					defaults={{ mines : 10, dim0 : 10, dim1 : 10}}
-				/>
+				<div>
+					{games && <GameList
+						games={games}
+						clickFn={this.selectGame}
+						currentId={gameId}
+					/>}
+					<button onClick={this.refreshGameList}>Refresh list</button>
+					<br />
+					<NewGameDialogue
+						submitFn={this.newGame}
+						defaults={{ mines : 10, dim0 : 10, dim1 : 10}}
+					/>
+				</div>
 			{/*<StatusInfo msg={statusMsg} />*/}
 			</div>
 		);
@@ -636,7 +643,7 @@ class NewGameDialogue extends React.Component {
 					def={this.props.defaults.dim1}
 					entryFn={this.textEntryFn}
 				/>
-				<br />
+				{' '}
 				<button onClick={this.submitFn}>New Game</button>
 			</div>
 		)
