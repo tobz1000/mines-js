@@ -258,23 +258,31 @@ class ClientGame extends React.Component {
 
 	cellRightClicked(x, y) {
 		const queueFlag = (_x, _y) => {
+
 			const cell = this.cellInfo(_x, _y);
-			const [addSet, removeSet] = cell.flagged ?
-				[this.state.toUnflag, this.state.toFlag] :
-				[this.state.toFlag, this.state.toUnflag];
 
 			if(cell.cellState !== "unknown")
 				return;
 
-			/* Only add to set if not currently in the other set (i.e. flag then
-			unflag == no action) */
-			if(!removeSet.delete([_x, _y]))
-				addSet.add([_x, _y]);
+			const shownAsFlagged = (
+				(cell.flagged && !cell.toUnflag) ||
+				(!cell.flagged && cell.toFlag)
+			);
+
+			const queueSet = cell.flagged ? this.state.toUnflag : this.state.toFlag;
+
+			/* TODO: broken, since a new array is used each time (can be added
+			multiple times; never deleted) */
+			/* Either queue or unqueue action for next server submit */
+			if(cell.flagged === shownAsFlagged)
+				queueSet.add([_x, _y]);
+			else
+				queueSet.delete([_x, _y]);
 
 			/* Show flags/unflags before server request. */
 			this.setState(prevState => {
-				cell.toFlag = !cell.flagged;
-				cell.toUnflag = cell.flagged;
+				cell.toFlag = !shownAsFlagged;
+				cell.toUnflag = shownAsFlagged;
 
 				return prevState;
 			});
@@ -477,8 +485,8 @@ class GameCell extends React.Component {
 
 		if(cellState === "unknown") {
 			if(
-				(flagged && !toUnflag) ||
-				(!flagged && toFlag && this.props.inPlayState)
+				(flagged && (!toUnflag && this.props.inPlayState)) ||
+				(!flagged && (toFlag && this.props.inPlayState))
 			)
 				className += " cellFlagged";
 			else if(hover && this.props.inPlayState)
