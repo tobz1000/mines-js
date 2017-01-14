@@ -69,7 +69,9 @@ class CellInfoArray {
 				cellState : "unknown",
 				surrCount : undefined,
 				flagged : false,
-				toClear : false
+				toClear : false,
+				toFlag : false,
+				toUnflag : false
 			};
 		}
 
@@ -103,7 +105,7 @@ class GameViewer extends React.Component {
 
 	async newGame(mines, dims, pass) {
 		const resp = await serverAction("new", {mines, dims, pass});
-		console.log(resp);
+
 		this.refreshGameList();
 		this.selectGame(resp.id);
 	}
@@ -199,6 +201,11 @@ class ClientGame extends React.Component {
 	}
 
 	cellEventFn (x, y) {
+		/* TODO: Hover state can get stuck when re-viewing an old turn (becomes
+		apparent when moving back to current turn). */
+		if(!this.inPlayState())
+			return () => {};
+
 		const { currentTurn, gameTurns } = this.state;
 
 		return (ev) => ({
@@ -221,9 +228,9 @@ class ClientGame extends React.Component {
 
 	cellClicked(x, y) {
 		const queueClear = (_x, _y) => {
-			const { cellState, flagged } = this.cellInfo(_x, _y);
+			const cell = this.cellInfo(_x, _y);
 
-			if(cellState === "unknown" && !flagged)
+			if(cell.cellState === "unknown" && !cell.toFlag && !cell.flagged)
 				this.toClear.add([_x, _y]);
 		};
 
@@ -249,20 +256,28 @@ class ClientGame extends React.Component {
 		this.cellHovered(x, y, false);
 	}
 
-	cellRightClicked(cellInfo) {
+	cellRightClicked(x, y) {
 		const queueFlag = (_x, _y) => {
-			const { cellState, flagged } = this.cellInfo(_x, _y);
-			const [addSet, removeSet] = flagged ?
+			const cell = this.cellInfo(_x, _y);
+			const [addSet, removeSet] = cell.flagged ?
 				[this.state.toUnflag, this.state.toFlag] :
 				[this.state.toFlag, this.state.toUnflag];
 
-			if(cellState !== "unknown")
+			if(cell.cellState !== "unknown")
 				return;
 
 			/* Only add to set if not currently in the other set (i.e. flag then
 			unflag == no action) */
-			if(!removeSet.delete(this))
-				addSet.add(this);
+			if(!removeSet.delete([_x, _y]))
+				addSet.add([_x, _y]);
+
+			/* Show flags/unflags before server request. */
+			this.setState(prevState => {
+				cell.toFlag = !cell.flagged;
+				cell.toUnflag = cell.flagged;
+
+				return prevState;
+			});
 		};
 
 		this.performSelfOrSurrounding(x, y, queueFlag);
@@ -271,7 +286,7 @@ class ClientGame extends React.Component {
 	async performTurn() {
 		const { id, pass } = this.props;
 
-		const { flag, unflag } = this.state;
+		const { toFlag : flag, toUnflag : unflag } = this.state;
 		const clear = this.toClear;
 
 		if(!flag.size && !unflag.size && !clear.size)
@@ -285,10 +300,14 @@ class ClientGame extends React.Component {
 		 * since the user has no visual indicator of a still-queued clear. */
 		this.toClear = new Set();
 
-		await resp;
+		const turnNum = (await resp).turnNum;
 
 		/* On successful response, flush queued flags. */
-		this.setState({ toFlag : new Set(), toUnflag : new Set() });
+		this.setState({
+			toFlag : new Set(),
+			toUnflag : new Set(),
+			currentTurn : turnNum
+		});
 	}
 
 	updateTurnInfo({
@@ -340,7 +359,9 @@ class ClientGame extends React.Component {
 
 		/* Update flagged/unflagged info */
 		for(const coords of flagged) {
+			console.log(coords);
 			newCellInfo.get(...coords).flagged = true;
+			console.log(newCellInfo.get(...coords));
 		}
 
 		for(const coords of unflagged) {
@@ -365,6 +386,13 @@ class ClientGame extends React.Component {
 		}
 	}
 
+	inPlayState() {
+		return (
+			!this.state.gameOver &&
+			this.state.currentTurn === this.state.gameTurns.length - 1
+		);
+	}
+
 	componentWillUnmount() {
 		this.serverWatcher.close();
 
@@ -387,6 +415,7 @@ class ClientGame extends React.Component {
 		return (
 			<div className="gameArea">
 				{turnInfo && <GameGrid
+					inPlayState={this.inPlayState()}
 					turnInfo={turnInfo}
 					cellEventFn={(x, y) => this.cellEventFn(x, y)}
 				/>}
@@ -407,7 +436,6 @@ ClientGame = autobind(ClientGame);
 
 class GameGrid extends React.Component {
 	render() {
-		// const [x_r, y_r] = [10, 10];
 		const [x_r, y_r] = this.props.turnInfo.dims;
 		const cellInfo = (x, y) => this.props.turnInfo.cellInfo.get(x, y);
 
@@ -418,6 +446,7 @@ class GameGrid extends React.Component {
 						<GameCell
 							key={x.toString()}
 							{ ...cellInfo(x, y) }
+							inPlayState={this.props.inPlayState}
 							onEvent={this.props.cellEventFn(x, y)}
 						/>
 					))}</tr>
@@ -429,29 +458,45 @@ class GameGrid extends React.Component {
 
 class GameCell extends React.Component {
 	render() {
+		const {
+			cellState,
+			surrCount,
+			flagged,
+			toClear,
+			toFlag,
+			toUnflag,
+			hover,
+			onEvent
+		} = this.props;
+
 		let className = "cell laminate " + ({
-			flagged : 'cellFlagged',
 			mine  : 'cellMine',
 			unknown : 'cellUnknown',
 			cleared  : 'cellCleared',
-		}[this.props.cellState] || "");
+		}[cellState] || "");
 
-		if(this.props.hover && this.props.cellState === "unknown")
-			className += " cellHover";
-
-		if(this.props.toClear && this.props.cellState === "unknown")
-			className += " cellToClear";
+		if(cellState === "unknown") {
+			if(
+				(flagged && !toUnflag) ||
+				(!flagged && toFlag && this.props.inPlayState)
+			)
+				className += " cellFlagged";
+			else if(hover && this.props.inPlayState)
+				className += " cellHover";
+			else if(toClear)
+				className += " cellToClear";
+		}
 
 		let text;
-		if(this.props.cellState === "cleared" && this.props.surrCount > 0)
-			text = this.props.surrCount;
+		if(cellState === "cleared" && surrCount > 0)
+			text = surrCount;
 
 		let event_names = [ "onClick", "onContextMenu", ];
 		CELL_HOVER && event_names.push("onMouseEnter", "onMouseLeave");
 
 		let events = {};
 		for (const e of event_names) {
-			events[e] = () => this.props.onEvent(e);
+			events[e] = () => onEvent(e);
 		}
 
 		return <td {...{ className }} {...events}>{text}</td>;
@@ -520,7 +565,7 @@ class DebugArea extends React.Component {
 class GameList extends React.Component {
 	render() {
 		return (
-			<div className="gameList"><ul>{
+			<div className="gameList laminate"><ul>{
 				this.props.games.map((game, i) =>
 					<GameListEntry
 						key={i}
@@ -606,11 +651,11 @@ class ListItemProp extends React.Component {
 }
 
 class NewGameDialogue extends React.Component {
-	constructor() {
-		super();
+	constructor(props) {
+		super(props);
 
-		this.state = {};
-		this.submitFn = () =>{
+		this.state = Object.assign({}, this.props.defaults);
+		this.submitFn = () => {
 			const { mines, dim0, dim1 } = this.state;
 			this.props.submitFn(mines, [dim0, dim1], undefined);
 		};
