@@ -28,6 +28,7 @@ const schemaOptions = {
 
 const coordsType = [ Number ];
 const gameSchema = new mg.Schema({
+	createdAt : { type : Date, default: Date.now },
 	pass : String,
 	dims : coordsType,
 	size : Number,
@@ -37,6 +38,7 @@ const gameSchema = new mg.Schema({
 	turns : [
 		{
 			_id : false,
+			turnTakenAt : { type : Date, default: Date.now },
 			clearReq: [ coordsType ],
 			clearActual: [
 				{
@@ -257,6 +259,7 @@ Object.assign(gameSchema, gameMethods);
 _.each(gameVirtuals, (fn, name) => {
 	gameSchema.virtual(name).get(fn);
 });
+
 /*
  * Allows accessing properties of latest turn from root of schema, e.g.
  * "game.gameOver" instead of "game.turns[game.turnNum - 1].gameOver".
