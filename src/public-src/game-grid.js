@@ -592,9 +592,9 @@ class GameListEntry extends React.Component {
 		const { mines, clients, dims, id } = this.props.info;
 
 		const infoItems = [
-			{ type: "id", text: id },
-			{ type: "dims", text: `${dims[0]}x${dims[1]}` },
-			{ type: "mines", text: mines },
+			{ type : "client", text : clients.join(", ") || "Unknown"},
+			{ type : "dims", text : `${dims[0]}x${dims[1]}` },
+			{ type : "mines", text : mines },
 		];
 
 		return (
@@ -622,6 +622,10 @@ class ListItemProp extends React.Component {
 			mines : {
 				icon : "fa-bomb",
 				minChars : 2,
+			},
+			client : {
+				icon : "fa-user",
+				minChars : 10
 			},
 			playable : {
 				icon : "fa-gamepad"
@@ -651,7 +655,7 @@ class ListItemProp extends React.Component {
 		const minWidth = (minChars || 0) + (icon ? 2 : 0);
 		return (
 			<span style={{ minWidth: `${minWidth}ch` }}>{[
-				icon && <i key="i" className={`fa ${icon}`} />,
+				icon && <i key="i" className={`fa fa-fw ${icon}`} />,
 				this.props.text
 			]}</span>
 		)
