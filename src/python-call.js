@@ -13,7 +13,7 @@ const games = [
 const ps = new PythonShell(
 	"game_init.py",
 	{
-		pythonPath : pythonRoot + "/venv/bin/python3.4",
+		pythonPath : pythonRoot + "/venv/bin/python3",
 		scriptPath : pythonRoot + "/src",
 		args : JSON.stringify(games)
 	},
