@@ -367,9 +367,7 @@ class ClientGame extends React.Component {
 
 		/* Update flagged/unflagged info */
 		for(const coords of flagged) {
-			console.log(coords);
 			newCellInfo.get(...coords).flagged = true;
-			console.log(newCellInfo.get(...coords));
 		}
 
 		for(const coords of unflagged) {
@@ -474,7 +472,8 @@ class GameCell extends React.Component {
 			toFlag,
 			toUnflag,
 			hover,
-			onEvent
+			onEvent,
+			inPlayState
 		} = this.props;
 
 		let className = "cell laminate " + ({
@@ -485,11 +484,11 @@ class GameCell extends React.Component {
 
 		if(cellState === "unknown") {
 			if(
-				(flagged && (!toUnflag && this.props.inPlayState)) ||
-				(!flagged && (toFlag && this.props.inPlayState))
+				(flagged && (!(toUnflag && inPlayState))) ||
+				(!flagged && (toFlag && inPlayState))
 			)
 				className += " cellFlagged";
-			else if(hover && this.props.inPlayState)
+			else if(hover && inPlayState)
 				className += " cellHover";
 			else if(toClear)
 				className += " cellToClear";
