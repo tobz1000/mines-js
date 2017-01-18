@@ -143,7 +143,6 @@ class ClientGame extends React.Component {
 		this.state = {
 			gameTurns : [],
 			currentTurn : -1,
-			gameOver : false,
 			toFlag : new Set(),
 			toUnflag : new Set(),
 			statusMsg : undefined
@@ -173,16 +172,16 @@ class ClientGame extends React.Component {
 		}
 	}
 
-	cellInfo(x, y) {
-		return this.state.gameTurns[this.state.currentTurn].cellInfo.get(x, y);
+	get currentTurnInfo() {
+		return this.state.gameTurns[this.state.currentTurn];
 	}
 
-	get dims() {
-		return this.state.gameTurns[this.state.currentTurn].dims;
+	cellInfo(x, y) {
+		return this.currentTurnInfo.cellInfo.get(x, y);
 	}
 
 	surroundingCells(x, y) {
-		const [dim_x, dim_y] = this.dims;
+		const [dim_x, dim_y] = this.currentTurnInfo.dims;
 		const surr = [];
 
 		for (let i of [-1, 0, 1]) {
@@ -394,7 +393,7 @@ class ClientGame extends React.Component {
 
 	inPlayState() {
 		return (
-			!this.state.gameOver &&
+			!this.currentTurnInfo.gameOver &&
 			this.state.currentTurn === this.state.gameTurns.length - 1
 		);
 	}
