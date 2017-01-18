@@ -104,7 +104,7 @@ class GameViewer extends React.Component {
 	}
 
 	async newGame(mines, dims, pass) {
-		const resp = await serverAction("new", {mines, dims, pass});
+		const resp = await serverAction("new", {mines, dims, pass, client : "Human"});
 
 		this.refreshGameList();
 		this.selectGame(resp.id);
@@ -300,7 +300,7 @@ class ClientGame extends React.Component {
 		if(!flag.size && !unflag.size && !clear.size)
 			return;
 
-		const params = { id, pass, clear, flag, unflag, client : "human" };
+		const params = { id, pass, clear, flag, unflag, client : "Human" };
 
 		const resp = serverAction("turn", params);
 
@@ -576,7 +576,7 @@ class GameList extends React.Component {
 			<div className="gameList laminate"><ul>{
 				this.props.games.map((game, i) =>
 					<GameListEntry
-						key={i}
+						key={game.id}
 						info={game}
 						selected={game.id === this.props.currentId}
 						onClick={() => this.props.clickFn(game.id)}
@@ -592,9 +592,9 @@ class GameListEntry extends React.Component {
 		const { mines, clients, dims, id } = this.props.info;
 
 		const infoItems = [
-			{ type : "client", text : clients.join(", ") || "Unknown"},
 			{ type : "dims", text : `${dims[0]}x${dims[1]}` },
 			{ type : "mines", text : mines },
+			{ type : "client", text : clients.join(", ") || "Unknown"},
 		];
 
 		return (
@@ -667,6 +667,7 @@ class NewGameDialogue extends React.Component {
 		super(props);
 
 		this.state = Object.assign({}, this.props.defaults);
+
 		this.submitFn = () => {
 			const { mines, dim0, dim1 } = this.state;
 			this.props.submitFn(mines, [dim0, dim1], undefined);
@@ -683,21 +684,21 @@ class NewGameDialogue extends React.Component {
 				<NumberEntry
 					label="Mines: "
 					param="mines"
-					def={this.props.defaults.mines}
+					val={this.state.mines}
 					entryFn={this.textEntryFn}
 				/>
 				{' '}
 				<NumberEntry
 					label="Columns: "
 					param="dim0"
-					def={this.props.defaults.dim0}
+					val={this.state.dim0}
 					entryFn={this.textEntryFn}
 				/>
 				{' '}
 				<NumberEntry
 					label="Rows: "
 					param="dim1"
-					def={this.props.defaults.dim1}
+					val={this.state.dim1}
 					entryFn={this.textEntryFn}
 				/>
 				{' '}
@@ -718,9 +719,9 @@ class NumberEntry extends React.Component {
 	}
 
 	render() {
-		const { label, param, def } = this.props;
+		const { label, param, val } = this.props;
 		const input = (
-			<input type="number" min="1" onChange={this.entryFn} value={def} />
+			<input type="number" min="1" onChange={this.entryFn} value={val} />
 		);
 
 		return label && <label>{label}{input}</label> || input;
