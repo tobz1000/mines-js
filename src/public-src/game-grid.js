@@ -347,6 +347,16 @@ class ClientGame extends React.Component {
 
 			const prevCellInfo = prevTurn.cellInfo;
 
+			/* Copy flags/unflags for this turn to last turn's data, to that
+			flags show the client's intentions for the next turn. */
+			for(const coords of flagged) {
+				prevCellInfo.get(...coords).flagged = true;
+			}
+
+			for(const coords of unflagged) {
+				prevCellInfo.get(...coords).flagged = false;
+			}
+
 			/* Copy cell info to new turn as an array of new objects */
 			for(const i in prevCellInfo.data.arr)
 				Object.assign(newCellInfo.data.get(i), prevCellInfo.data.get(i));
@@ -362,15 +372,6 @@ class ClientGame extends React.Component {
 				cellState : state,
 				surrCount : surrounding
 			});
-		}
-
-		/* Update flagged/unflagged info */
-		for(const coords of flagged) {
-			newCellInfo.get(...coords).flagged = true;
-		}
-
-		for(const coords of unflagged) {
-			newCellInfo.get(...coords).flagged = false;
 		}
 
 		this.setState(({gameTurns}) => {
