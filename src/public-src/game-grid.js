@@ -26,36 +26,6 @@ const serverAction = async (action, req) => {
 	return resp;
 };
 
-/*
-
-GameViewer.state =
-{
-	gameTurns : {
-		turnNum : {
-			gameOver : Boolean,
-			win : Boolean,
-			cellsRem : Number,
-			cellInfo : ndArray([ {
-				state : String,
-				surrCount : Number/undefined,
-			} ])
-		}
-	}
-}
-
-GameGrid.props = {
-	cellInfo : ndArray([ {
-		state : String,
-		surrCount : Number/undefined,
-	} ])
-}
-
-GameGrid.state = {
-	hoverInfo : ndArray([ Boolean ])
-}
-
-*/
-
 /* Implements a get method for ndarray, which lazy-loads a new default cell
 state if empty */
 class CellInfoArray {
