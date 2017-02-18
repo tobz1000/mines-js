@@ -511,9 +511,9 @@ class TurnListEntry extends React.Component {
 				className={this.props.selected ? "listSelected" : undefined}
 				onClick={this.props.onClick}
 			>
-				<GameStatusProp {...{ gameOver, win, cellsRem, initialCellsRem }} />
 				<ListItemProp type="clearReq" text={clearReq.length} />
 				<ListItemProp type="clearActual" text={clearActual.length} />
+				<GameStatusProp {...{ gameOver, win, cellsRem, initialCellsRem }} />
 			</li>
 		);
 	}
@@ -565,10 +565,10 @@ class GameListEntry extends React.Component {
 				className={this.props.selected ? "listSelected" : undefined}
 				onClick={this.props.onClick}
 			>
+				<GameStatusProp {...{ gameOver, win, cellsRem, initialCellsRem }} />
 				<ListItemProp type="dims" text={`${dims[0]}x${dims[1]}`} />
 				<ListItemProp type="mines" text={mines} />
 				<ListItemProp type="client" text={clients.join(", ") || "Unknown"} />
-				<GameStatusProp {...{ gameOver, win, cellsRem, initialCellsRem }} />
 			</li>
 		);
 	}
@@ -611,10 +611,12 @@ class ListItemProp extends React.Component {
 				minChars : 3,
 			},
 			win : {
-				icon : "fa-trophy"
+				icon : "fa-trophy",
+				minChars : 1
 			},
 			lose : {
-				icon : "fa-bomb"
+				icon : "fa-bomb",
+				minChars : 1
 			}
 		}[this.props.type];
 
