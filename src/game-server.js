@@ -311,9 +311,18 @@ const newGame = async (params) => {
 	return game.userState;
 }
 
-const listGames = () => {
-	return Game.find({}, "id dims mines clients");
-}
+const listGames = async () => {
+	return (await Game.find({})).map(game => ({
+		id : game.id,
+		dims : game.dims,
+		mines : game.mines,
+		clients : game.clients,
+		gameOver : game.gameOver,
+		win : game.win,
+		cellsRem : game. cellsRem,
+		initialCellsRem : game.turns[0].cellsRem
+	}));
+};
 
 const gameState = async ({id, turn}) => {
 	const game = await loadGame(id);

@@ -502,28 +502,19 @@ class TurnList extends React.Component {
 
 class TurnListEntry extends React.Component {
 	render() {
-		const {clearActual, clearReq, gameOver, win, cellsRem } = this.props.info;
-
-		const infoItems = [
-			{ type: "clearReq", text: clearReq.length },
-			{ type: "clearActual", text: clearActual.length }
-		];
-
-		if(gameOver)
-			infoItems.push({ type: win ? "win" : "lose" });
-		else if(this.props.initialCellsRem !== undefined) {
-			const percComp = 100 * (1 - cellsRem / this.props.initialCellsRem);
-			infoItems.push({ type: "percComplete", text: `${percComp.toFixed()}%`})
-		}
+		const { clearActual, clearReq, gameOver, win, cellsRem } = this.props.info;
+		const initialCellsRem = this.props.initialCellsRem;
 
 		return (
 			<li
 				value={this.props.turnNum}
 				className={this.props.selected ? "listSelected" : undefined}
 				onClick={this.props.onClick}
-			>{
-				infoItems.map((props, i) => <ListItemProp key={i} {...props} />)
-			}</li>
+			>
+				<GameStatusProp {...{ gameOver, win, cellsRem, initialCellsRem }} />
+				<ListItemProp type="clearReq" text={clearReq.length} />
+				<ListItemProp type="clearActual" text={clearActual.length} />
+			</li>
 		);
 	}
 }
@@ -558,21 +549,27 @@ class GameList extends React.Component {
 
 class GameListEntry extends React.Component {
 	render() {
-		const { mines, clients, dims, id } = this.props.info;
-
-		const infoItems = [
-			{ type : "dims", text : `${dims[0]}x${dims[1]}` },
-			{ type : "mines", text : mines },
-			{ type : "client", text : clients.join(", ") || "Unknown"},
-		];
+		const {
+			mines,
+			clients,
+			dims,
+			id,
+			gameOver,
+			win,
+			cellsRem,
+			initialCellsRem
+		} = this.props.info;
 
 		return (
 			<li
 				className={this.props.selected ? "listSelected" : undefined}
 				onClick={this.props.onClick}
-			>{
-				infoItems.map((props, i) => <ListItemProp key={i} {...props} />)
-			}</li>
+			>
+				<ListItemProp type="dims" text={`${dims[0]}x${dims[1]}`} />
+				<ListItemProp type="mines" text={mines} />
+				<ListItemProp type="client" text={clients.join(", ") || "Unknown"} />
+				<GameStatusProp {...{ gameOver, win, cellsRem, initialCellsRem }} />
+			</li>
 		);
 	}
 }
@@ -628,6 +625,19 @@ class ListItemProp extends React.Component {
 				this.props.text
 			]}</span>
 		)
+	}
+}
+
+class GameStatusProp extends React.Component {
+	render() {
+		const { gameOver, win, cellsRem, initialCellsRem } = this.props;
+
+		if(gameOver)
+			return <ListItemProp type={win ? "win" : "lose"} />
+		else if(initialCellsRem !== undefined) {
+			const percComp = 100 * (1 - cellsRem / this.props.initialCellsRem);
+			return <ListItemProp type="percComplete" text={`${percComp.toFixed()}%`} />
+		}
 	}
 }
 
