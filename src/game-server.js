@@ -4,6 +4,8 @@ const mg = require("mongoose");
 const ndArray = require("ndarray");
 const sse = require("express-eventsource");
 const product = require("./product");
+const shuffleSeed = require("./shuffle-seed");
+const crypto = require("crypto");
 
 const ReqError = require("./error").ReqError;
 
@@ -30,6 +32,7 @@ const coordsType = [ Number ];
 const gameSchema = new mg.Schema({
 	createdAt : { type : Date, default: Date.now },
 	pass : String,
+	seed : Number,
 	dims : coordsType,
 	size : Number,
 	mines : Number,
@@ -167,6 +170,7 @@ const gameMethods = {
 
 			return Object.assign({
 				id : this.id,
+				seed : this.seed,
 				dims : this.dims,
 				mines : this.mines,
 				turnNum : turnNum
@@ -184,7 +188,7 @@ const gameMethods = {
 		}
 	},
 	statics : {
-		newGameState : ({dims, mines, client, pass}) => {
+		newGameState : ({dims, mines, client, pass, seed}) => {
 			const size = dims.reduce((a, b) => a * b);
 			const max_mines = size - 1;
 
@@ -196,15 +200,20 @@ const gameMethods = {
 				});
 			}
 
-			const cellArray = _.shuffle(new Array(size)
-				.fill(cellState.MINE, 0, mines)
-				.fill(cellState.EMPTY, mines, size)
+			seed = seed || crypto.randomBytes(4).readUInt32BE(0, true);
+
+			const cellArray = shuffleSeed(
+				new Array(size)
+					.fill(cellState.MINE, 0, mines)
+					.fill(cellState.EMPTY, mines, size),
+				seed
 			);
 
 			const flagArray = new Array(size).fill(false, size);
 
 			return {
 				pass : pass,
+				seed : seed,
 				dims : dims,
 				size : size,
 				mines : mines,
