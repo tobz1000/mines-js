@@ -50,6 +50,23 @@ input[type=number] {
 	background-color: #dddddd;
 }
 
+.axis-x,.axis-y {
+	font-size: 70%;
+	color: #444444;
+}
+
+.axis-x {
+	text-align: center;
+	vertical-align: bottom;
+	padding-bottom: 0;
+}
+
+.axis-y {
+	text-align: right;
+	vertical-align: center;
+	padding-right: 0
+}
+
 pre {
 	font-family: monospace;
 	white-space: pre-wrap;

@@ -413,18 +413,24 @@ ClientGame = autobind(ClientGame);
 class GameGrid extends React.Component {
 	render() {
 		const [x_r, y_r] = this.props.turnInfo.dims;
-		const cellInfo = (x, y) => this.props.turnInfo.cellInfo.get(x, y);
 
 		return (
 			<div onContextMenu={e => e.preventDefault()}>
-				<table><tbody>{_.range(y_r).map(y =>
-					<tr key={y.toString()}>{_.range(x_r).map(x => (
-						<GameCell
-							key={x.toString()}
-							{ ...cellInfo(x, y) }
-							inPlayState={this.props.inPlayState}
-							onEvent={this.props.cellEventFn(x, y)}
-						/>
+				<table><tbody>{_.range(-1, y_r).map(y =>
+					<tr key={y}>{_.range(-1, x_r).map(x => (
+						x === -1 && y === -1 ?
+							<td key={x} />
+						: y === -1 ?
+							<td className="laminate axis-x" key={x}>{x}</td>
+						: x === -1 ?
+							<td className="laminate axis-y" key={x}>{y}</td>
+						:
+							<GameCell
+								key={x}
+								{ ...this.props.turnInfo.cellInfo.get(x, y) }
+								inPlayState={this.props.inPlayState}
+								onEvent={this.props.cellEventFn(x - 1, y - 1)}
+							/>
 					))}</tr>
 				)}</tbody></table>
 			</div>
