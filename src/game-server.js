@@ -108,7 +108,10 @@ const gameMethods = {
 
 				this.clearActual.push(cell.info);
 
-				if(cell.surroundCount === 0) {
+				if(
+					cell.state === cellState.CLEARED &&
+					cell.surroundCount === 0
+				) {
 					for(let surrCoords of this.surroundingCoords(coords)) {
 						coordsStack.push(surrCoords);
 					}
