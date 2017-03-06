@@ -429,7 +429,7 @@ class GameGrid extends React.Component {
 								key={x}
 								{ ...this.props.turnInfo.cellInfo.get(x, y) }
 								inPlayState={this.props.inPlayState}
-								onEvent={this.props.cellEventFn(x - 1, y - 1)}
+								onEvent={this.props.cellEventFn(x, y)}
 							/>
 					))}</tr>
 				)}</tbody></table>
