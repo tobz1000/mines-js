@@ -36,6 +36,7 @@ const gameSchema = new mg.Schema({
 	dims : coordsType,
 	size : Number,
 	mines : Number,
+	autoclear : Boolean,
 	/* Requested clears and actual clears (including automatic zero-surrounding)
 	for each turn */
 	turns : [
@@ -109,6 +110,7 @@ const gameMethods = {
 				this.clearActual.push(cell.info);
 
 				if(
+					this.autoclear &&
 					cell.state === cellState.CLEARED &&
 					cell.surroundCount === 0
 				) {
@@ -176,6 +178,7 @@ const gameMethods = {
 				seed : this.seed,
 				dims : this.dims,
 				mines : this.mines,
+				autoclear : this.autoclear,
 				turnNum : turnNum
 			}, this.turns[turnNum].toObject());
 		},
@@ -191,7 +194,7 @@ const gameMethods = {
 		}
 	},
 	statics : {
-		newGameState : ({dims, mines, client, pass, seed}) => {
+		newGameState : ({dims, mines, client, pass, seed, autoclear}) => {
 			const size = dims.reduce((a, b) => a * b);
 			const max_mines = size - 1;
 
@@ -204,6 +207,10 @@ const gameMethods = {
 			}
 
 			seed = seed || crypto.randomBytes(4).readUInt32BE(0, true);
+
+			/* Autoclear true by default (read non-false falsy as undefined) */
+			if(autoclear !== false)
+				autoclear = true;
 
 			const cellArray = shuffleSeed(
 				new Array(size)
@@ -220,6 +227,7 @@ const gameMethods = {
 				dims : dims,
 				size : size,
 				mines : mines,
+				autoclear : autoclear,
 				turns : [
 					{
 						turnFinished : true,
@@ -330,8 +338,9 @@ const listGames = async () => {
 		mines : game.mines,
 		clients : game.clients,
 		gameOver : game.gameOver,
+		autoclear : game.autoclear,
 		win : game.win,
-		cellsRem : game. cellsRem,
+		cellsRem : game.cellsRem,
 		initialCellsRem : game.turns[0].cellsRem
 	}));
 };
