@@ -299,7 +299,7 @@ const Game = mg.model("Game", gameSchema);
 
 const gameServerInit = async () => {
 	if(!gameServerInit.connect)
-		gameServerInit.connect = mg.connect("localhost", "test");
+		gameServerInit.connect = mg.connect("mongodb://localhost/test");
 
 	await gameServerInit.connect;
 }
