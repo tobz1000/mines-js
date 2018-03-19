@@ -326,7 +326,7 @@ const loadGame = async (id) => {
 const newGame = async (params) => {
 	const game = new Game(Game.newGameState(params));
 
-	game.save();
+	await game.save();
 
 	return game.userState;
 }
@@ -354,7 +354,7 @@ const turn = async (params) => {
 	const game = await loadGame(params.id);
 
 	game.turn(params);
-	game.save();
+	await game.save();
 
 	const state = game.userState;
 
