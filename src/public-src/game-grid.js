@@ -642,9 +642,14 @@ class GameStatusProp extends React.Component {
 
 		if(gameOver)
 			return <ListItemProp type={win ? "win" : "lose"} />
-		else if(initialCellsRem !== undefined) {
-			const percComp = 100 * (1 - cellsRem / this.props.initialCellsRem);
-			return <ListItemProp type="percComplete" text={`${percComp.toFixed()}%`} />
+		else if (initialCellsRem !== undefined) {
+			let percComp = Math.round(100 * (1 - cellsRem / initialCellsRem));
+
+			if (percComp === 100 && cellsRem > 0) {
+				percComp = 99;
+			}
+
+			return <ListItemProp type="percComplete" text={`${percComp}%`} />
 		}
 	}
 }
