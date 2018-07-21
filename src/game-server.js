@@ -25,7 +25,7 @@ const renameIdKey = (doc, ret) => {
 /* Necessary for returning db results directly to clients */
 const schemaOptions = {
 	toObject : { transform : renameIdKey },
-	toJSON :{ transform : renameIdKey },
+	toJSON : { transform : renameIdKey },
 };
 
 const coordsType = [ Number ];
